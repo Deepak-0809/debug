@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
   const [buggyCode, setBuggyCode] = useState("");
   const [correctCode, setCorrectCode] = useState("");
