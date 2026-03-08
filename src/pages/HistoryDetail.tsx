@@ -297,9 +297,9 @@ export default function HistoryDetail() {
                           <span className="text-[10px] font-mono text-muted-foreground uppercase">
                             Expected
                           </span>
-                          <pre className="mt-0.5 p-2 rounded bg-primary/5 border border-primary/20 text-xs font-mono whitespace-pre-wrap break-all">
-                            {tc.output_correct}
-                          </pre>
+                          <div className="mt-0.5 p-2 rounded bg-primary/5 border border-primary/20 text-xs font-mono">
+                            <CollapsibleText text={tc.output_correct} className="text-xs font-mono" />
+                          </div>
                         </div>
                       )}
                     </div>
