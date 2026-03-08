@@ -10,8 +10,8 @@ import {
 import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-// Debug app main page
 const Index = () => {
   const { user, signOut } = useAuth();
   const [buggyCode, setBuggyCode] = useState("");
@@ -19,16 +19,59 @@ const Index = () => {
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Branch 1 state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<Record<string, unknown> | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
+  const handleAnalyze = async () => {
+    if (!buggyCode.trim() && !correctCode.trim() && !additionalInfo.trim()) {
+      toast.error("Please provide at least some code or problem info to analyze");
+      return;
+    }
+
+    setAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-problem", {
+        body: {
+          buggyCode,
+          correctCode,
+          additionalInfo,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to analyze problem");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.schema) {
+        setAnalysisResult(data.schema);
+        toast.success("Problem analyzed successfully!");
+      } else {
+        throw new Error("Unexpected response format");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Analysis failed";
+      setAnalysisError(message);
+      toast.error(message);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const handleFindFailing = () => {
-    if (!buggyCode.trim()) {
-      toast.error("Please paste your buggy code");
+    if (!analysisResult) {
+      toast.error("Run Branch 1 analysis first");
       return;
     }
-    if (!correctCode.trim()) {
-      toast.error("Please paste the correct reference code");
-      return;
-    }
-    toast.info("AI agent integration coming in Phase 3!");
+    toast.info("Branch 2 & 3 coming next!");
   };
 
   const handleRunSingle = () => {
@@ -37,7 +80,6 @@ const Index = () => {
 
   return (
     <div className="dark flex h-screen flex-col bg-background">
-      {/* Header */}
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
@@ -60,10 +102,8 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main Editor Area */}
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal">
-          {/* Panel 1: Buggy Code */}
           <ResizablePanel defaultSize={35} minSize={20}>
             <CodeEditorPanel
               label="Your Code (Buggy)"
@@ -75,7 +115,6 @@ const Index = () => {
 
           <ResizableHandle withHandle />
 
-          {/* Panel 2: Correct Code */}
           <ResizablePanel defaultSize={35} minSize={20}>
             <CodeEditorPanel
               label="Correct Code (Reference)"
@@ -87,7 +126,6 @@ const Index = () => {
 
           <ResizableHandle withHandle />
 
-          {/* Panel 3: Additional Info */}
           <ResizablePanel defaultSize={30} minSize={20}>
             <ConfigPanel
               additionalInfo={additionalInfo}
@@ -95,6 +133,10 @@ const Index = () => {
               onFindFailing={handleFindFailing}
               onRunSingle={handleRunSingle}
               loading={loading}
+              analysisResult={analysisResult}
+              analysisError={analysisError}
+              analyzing={analyzing}
+              onAnalyze={handleAnalyze}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
