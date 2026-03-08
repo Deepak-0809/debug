@@ -305,8 +305,6 @@ const Index = () => {
               onFindFailing={handleFindFailing}
               loading={loading}
               progressStep={progressStep}
-              language={language}
-              onLanguageChange={setLanguage}
             />
           </div>
           <div>
