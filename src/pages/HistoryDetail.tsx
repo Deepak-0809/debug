@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import CollapsibleText from "@/components/CollapsibleText";
+import CopyButton from "@/components/CopyButton";
 import DiagnosisDisplay from "@/components/DiagnosisDisplay";
 import {
   ArrowLeft,
@@ -199,7 +200,10 @@ export default function HistoryDetail() {
             </h2>
             <div className="rounded-lg border border-border bg-card p-4 space-y-3">
               <div>
-                <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
+                  <CopyButton text={run.failing_input} />
+                </div>
                 <div className="mt-1 p-3 rounded-md bg-muted/50 border border-border">
                   <CollapsibleText text={run.failing_input} className="text-xs font-mono" />
                 </div>
@@ -267,9 +271,10 @@ export default function HistoryDetail() {
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                        Input
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
+                        <CopyButton text={tc.input_data} />
+                      </div>
                       <div className="mt-0.5 p-2 rounded bg-muted/40 border border-border text-xs font-mono">
                         <CollapsibleText text={tc.input_data} className="text-xs font-mono" />
                       </div>
@@ -277,9 +282,10 @@ export default function HistoryDetail() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {tc.output_buggy !== null && (
                         <div>
-                          <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                            Your Output
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-muted-foreground uppercase">Your Output</span>
+                            <CopyButton text={tc.output_buggy} />
+                          </div>
                           <div
                             className={`mt-0.5 p-2 rounded border text-xs font-mono ${
                               tc.is_failing
@@ -293,9 +299,10 @@ export default function HistoryDetail() {
                       )}
                       {tc.output_correct !== null && (
                         <div>
-                          <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                            Expected
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-muted-foreground uppercase">Expected</span>
+                            <CopyButton text={tc.output_correct} />
+                          </div>
                           <div className="mt-0.5 p-2 rounded bg-primary/5 border border-primary/20 text-xs font-mono">
                             <CollapsibleText text={tc.output_correct} className="text-xs font-mono" />
                           </div>

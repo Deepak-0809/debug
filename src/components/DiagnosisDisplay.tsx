@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import CollapsibleText from "@/components/CollapsibleText";
+import CopyButton from "@/components/CopyButton";
 import { AlertTriangle, CheckCircle, XCircle, Lightbulb, ArrowRight, FileQuestion } from "lucide-react";
 
 interface DiagnosisIssue {
@@ -126,20 +127,29 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
               </span>
               <div className="space-y-1.5">
                 <div>
-                  <span className="text-[10px] text-muted-foreground font-mono">INPUT</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground font-mono">INPUT</span>
+                    <CopyButton text={diagnosis.failing_test.input} />
+                  </div>
                   <div className="text-xs text-foreground bg-secondary/40 rounded p-1.5 mt-0.5">
                     <CollapsibleText text={diagnosis.failing_test.input} className="text-xs font-mono" maxLines={4} maxChars={200} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-red-400 font-mono">YOUR OUTPUT</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-red-400 font-mono">YOUR OUTPUT</span>
+                      <CopyButton text={diagnosis.failing_test.buggy_output} />
+                    </div>
                     <div className="text-xs text-red-300 bg-red-500/10 rounded p-1.5 mt-0.5">
                       <CollapsibleText text={diagnosis.failing_test.buggy_output} className="text-xs font-mono" maxLines={4} maxChars={200} />
                     </div>
                   </div>
                   <div>
-                    <span className="text-[10px] text-green-400 font-mono">EXPECTED</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-green-400 font-mono">EXPECTED</span>
+                      <CopyButton text={diagnosis.failing_test.correct_output} />
+                    </div>
                     <div className="text-xs text-green-300 bg-green-500/10 rounded p-1.5 mt-0.5">
                       <CollapsibleText text={diagnosis.failing_test.correct_output} className="text-xs font-mono" maxLines={4} maxChars={200} />
                     </div>
