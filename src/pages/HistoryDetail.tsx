@@ -281,15 +281,15 @@ export default function HistoryDetail() {
                           <span className="text-[10px] font-mono text-muted-foreground uppercase">
                             Your Output
                           </span>
-                          <pre
-                            className={`mt-0.5 p-2 rounded border text-xs font-mono whitespace-pre-wrap break-all ${
+                          <div
+                            className={`mt-0.5 p-2 rounded border text-xs font-mono ${
                               tc.is_failing
                                 ? "bg-destructive/5 border-destructive/20 text-destructive"
                                 : "bg-muted/40 border-border"
                             }`}
                           >
-                            {tc.output_buggy}
-                          </pre>
+                            <CollapsibleText text={tc.output_buggy} className="text-xs font-mono" />
+                          </div>
                         </div>
                       )}
                       {tc.output_correct !== null && (
