@@ -201,7 +201,8 @@ export default function HistoryDetail() {
               <div>
                 <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
                 <pre className="mt-1 p-3 rounded-md bg-muted/50 border border-border text-xs font-mono whitespace-pre-wrap break-all">
-                  {run.failing_input}
+                  <CollapsibleText text={run.failing_input} className="text-xs font-mono" />
+                </pre>
                 </pre>
               </div>
               {(run.output_buggy || run.output_correct) && (
