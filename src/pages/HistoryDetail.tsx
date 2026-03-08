@@ -361,6 +361,43 @@ export default function HistoryDetail() {
             </div>
           </section>
         )}
+
+        {/* AI Chat History */}
+        {chatMessages.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" /> AI Chat ({chatMessages.length} messages)
+            </h2>
+            <div className="space-y-2">
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.role === "assistant" && (
+                    <div className="shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                      <Bot className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                  </div>
+                  {msg.role === "user" && (
+                    <div className="shrink-0 h-6 w-6 rounded-full bg-secondary flex items-center justify-center mt-1">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* AI Chat */}
