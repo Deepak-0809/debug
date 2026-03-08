@@ -137,12 +137,8 @@ const Index = () => {
               onLanguageChange={handleLanguageChange}
               sampleInput={sampleInput}
               onSampleInputChange={setSampleInput}
-              maxN={maxN}
-              onMaxNChange={setMaxN}
-              testCasesT={testCasesT}
-              onTestCasesTChange={setTestCasesT}
-              valueRange={valueRange}
-              onValueRangeChange={setValueRange}
+              constraints={constraints}
+              onConstraintChange={handleConstraintChange}
               onFindFailing={handleFindFailing}
               onRunSingle={handleRunSingle}
               loading={loading}
