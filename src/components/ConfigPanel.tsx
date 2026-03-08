@@ -52,16 +52,13 @@ export default function ConfigPanel({
   onLanguageChange,
   sampleInput,
   onSampleInputChange,
-  maxN,
-  onMaxNChange,
-  testCasesT,
-  onTestCasesTChange,
-  valueRange,
-  onValueRangeChange,
+  constraints,
+  onConstraintChange,
   onFindFailing,
   onRunSingle,
   loading,
 }: ConfigPanelProps) {
+  const currentConstraints = LANGUAGE_CONSTRAINTS[language] || LANGUAGE_CONSTRAINTS.cpp;
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
