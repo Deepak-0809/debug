@@ -322,7 +322,7 @@ const Index = () => {
       <AIChatPanel
         runContext={{
           runId: currentRunId,
-          language: "cpp",
+          language,
           buggyCode,
           correctCode,
           diagnosis,
