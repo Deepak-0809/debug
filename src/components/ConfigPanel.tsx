@@ -66,12 +66,17 @@ export default function ConfigPanel({
 
         {/* Progress indicator */}
         {loading && progressStep && (
-          <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3 mt-3 animate-in fade-in duration-300">
+          <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3 mt-3 animate-fade-in">
             <div className="flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
               <span className="text-xs font-medium text-foreground">{progressStep}</span>
             </div>
             <Progress value={undefined} className="h-1.5" />
+            <div className="flex gap-2 mt-2">
+              <div className="h-2 w-1/3 rounded bg-muted animate-pulse" />
+              <div className="h-2 w-1/4 rounded bg-muted animate-pulse delay-100" />
+              <div className="h-2 w-1/5 rounded bg-muted animate-pulse delay-200" />
+            </div>
           </div>
         )}
 
