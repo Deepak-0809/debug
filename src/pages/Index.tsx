@@ -97,7 +97,7 @@ const Index = () => {
       if (syntaxResult?.has_errors) {
         toast.warning(`Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s).`);
         setProgressStep("Step 5/5: AI diagnosing syntax errors...");
-        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode, correctCode, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId } });
+        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId } });
         if (diagError) throw new Error(diagError.message || "Diagnosis failed");
         if (diagData?.error) throw new Error(diagData.error);
         if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
