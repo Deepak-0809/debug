@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
+import DiagnosisDisplay from "@/components/DiagnosisDisplay";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,6 +20,7 @@ const Index = () => {
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressStep, setProgressStep] = useState("");
+  const [diagnosis, setDiagnosis] = useState<any>(null);
 
   const handleFindFailing = async () => {
     if (!buggyCode.trim()) {
@@ -31,11 +33,12 @@ const Index = () => {
     }
 
     setLoading(true);
+    setDiagnosis(null);
 
     try {
       // ===== BRANCH 1: Analyze problem structure =====
-      setProgressStep("Step 1/4: Analyzing problem structure...");
-      toast.info("Step 1/4: Analyzing problem structure...");
+      setProgressStep("Step 1/5: Analyzing problem structure...");
+      toast.info("Step 1/5: Analyzing problem structure...");
 
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke(
         "analyze-problem",
@@ -71,8 +74,8 @@ const Index = () => {
       const runId = runData?.id;
 
       // ===== BRANCH 2a: Check for syntax/runtime errors =====
-      setProgressStep("Step 2/4: Checking for syntax & runtime errors...");
-      toast.info("Step 2/4: Checking for syntax & runtime errors...");
+      setProgressStep("Step 2/5: Checking for syntax & runtime errors...");
+      toast.info("Step 2/5: Checking for syntax & runtime errors...");
 
       const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke(
         "check-syntax",
@@ -95,18 +98,41 @@ const Index = () => {
           .eq("id", runId);
       }
 
-      // If syntax/runtime errors found, skip test generation — go straight to Branch 3
+      // If syntax/runtime errors found, skip to Branch 3 with syntax data
       if (syntaxResult?.has_errors) {
         toast.warning(
-          `Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s). Skipping test generation — ready for Branch 3 diagnosis.`
+          `Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s). Diagnosing...`
         );
-        setProgressStep("Syntax errors detected — ready for diagnosis.");
+
+        setProgressStep("Step 5/5: AI diagnosing syntax errors...");
+        toast.info("Step 5/5: AI analyzing errors...");
+
+        const { data: diagData, error: diagError } = await supabase.functions.invoke(
+          "diagnose-bug",
+          {
+            body: {
+              buggyCode,
+              correctCode,
+              language: detectedLanguage,
+              syntaxErrors: syntaxResult,
+              executionResults: null,
+              runId,
+            },
+          }
+        );
+
+        if (diagError) throw new Error(diagError.message || "Diagnosis failed");
+        if (diagData?.error) throw new Error(diagData.error);
+
+        setDiagnosis(diagData.diagnosis);
+        setProgressStep("Diagnosis complete.");
+        toast.success("🔍 Diagnosis complete — check the results panel.");
         return;
       }
 
-      // ===== BRANCH 2b: Generate test cases using Branch 1 schema =====
-      setProgressStep("Step 3/4: Generating test cases...");
-      toast.info("Step 3/4: Generating test cases from constraints...");
+      // ===== BRANCH 2b: Generate test cases =====
+      setProgressStep("Step 3/5: Generating test cases...");
+      toast.info("Step 3/5: Generating test cases from constraints...");
 
       const { data: testData, error: testError } = await supabase.functions.invoke(
         "generate-test-cases",
@@ -126,7 +152,7 @@ const Index = () => {
       }
 
       // ===== BRANCH 2c: Execute both codes via Judge0 =====
-      setProgressStep(`Step 4/5: Executing ${testCount} test cases on Judge0...`);
+      setProgressStep(`Step 4/5: Executing ${testCount} test cases...`);
       toast.info(`Step 4/5: Running ${testCount} test cases on compiler...`);
 
       // Fetch stored test cases with their IDs
@@ -135,7 +161,6 @@ const Index = () => {
         input: tc.input,
       }));
 
-      // If test cases were stored in DB, fetch them to get IDs
       if (runId) {
         const { data: dbTestCases } = await supabase
           .from("test_cases")
@@ -169,7 +194,6 @@ const Index = () => {
       if (execData?.retry_branch1) {
         toast.error(`Execution error: ${execData.message}. Re-running analysis...`);
         setProgressStep("Input pattern error — restarting pipeline...");
-        // Recursively retry the whole pipeline
         setLoading(false);
         handleFindFailing();
         return;
@@ -177,22 +201,30 @@ const Index = () => {
 
       if (execData?.error) throw new Error(execData.error);
 
-      const summary = execData?.summary;
-      const failCount = summary?.failing || 0;
-      const passCount = summary?.passing || 0;
+      // ===== BRANCH 3: AI Diagnosis =====
+      setProgressStep("Step 5/5: AI diagnosing the bug...");
+      toast.info("Step 5/5: AI analyzing execution results...");
 
-      if (failCount > 0) {
-        const firstFail = summary.first_failing;
-        setProgressStep(
-          `Found ${failCount} failing test case(s). Ready for Branch 3 diagnosis.`
-        );
-        toast.success(
-          `🐛 Found ${failCount}/${summary.total} failing! First failing input saved. Ready for diagnosis.`
-        );
-      } else {
-        setProgressStep(`All ${passCount} test cases passed — codes produce identical output.`);
-        toast.success(`✅ All ${passCount} test cases passed. Both codes produce the same output.`);
-      }
+      const { data: diagData, error: diagError } = await supabase.functions.invoke(
+        "diagnose-bug",
+        {
+          body: {
+            buggyCode,
+            correctCode,
+            language: detectedLanguage,
+            syntaxErrors: null,
+            executionResults: execData,
+            runId,
+          },
+        }
+      );
+
+      if (diagError) throw new Error(diagError.message || "Diagnosis failed");
+      if (diagData?.error) throw new Error(diagData.error);
+
+      setDiagnosis(diagData.diagnosis);
+      setProgressStep("Diagnosis complete.");
+      toast.success("🔍 Diagnosis complete — check the results panel.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Analysis failed";
       toast.error(message);
@@ -232,7 +264,7 @@ const Index = () => {
 
       <div className="flex-1 min-h-0">
         <ResizablePanelGroup direction="horizontal">
-          <ResizablePanel defaultSize={35} minSize={20}>
+          <ResizablePanel defaultSize={30} minSize={15}>
             <CodeEditorPanel
               label="Your Code (Buggy)"
               language="cpp"
@@ -243,7 +275,7 @@ const Index = () => {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={35} minSize={20}>
+          <ResizablePanel defaultSize={30} minSize={15}>
             <CodeEditorPanel
               label="Correct Code (Reference)"
               language="cpp"
@@ -254,7 +286,7 @@ const Index = () => {
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize={30} minSize={20}>
+          <ResizablePanel defaultSize={20} minSize={15}>
             <ConfigPanel
               additionalInfo={additionalInfo}
               onAdditionalInfoChange={setAdditionalInfo}
@@ -263,6 +295,12 @@ const Index = () => {
               loading={loading}
               progressStep={progressStep}
             />
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize={20} minSize={15}>
+            <DiagnosisDisplay diagnosis={diagnosis} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
