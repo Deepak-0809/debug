@@ -124,7 +124,7 @@ export default function History() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`${isDark ? "dark" : ""} min-h-screen bg-background text-foreground`}>
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
@@ -132,9 +132,14 @@ export default function History() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold">Run History</h1>
-          <span className="text-sm text-muted-foreground ml-auto">
-            Last 3 months · {runs.length} runs
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Last 3 months · {runs.length} runs
+            </span>
+          </div>
         </div>
       </header>
 
