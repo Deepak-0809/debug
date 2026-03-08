@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.execute-code]
 verify_jwt = false
+
+[functions.diagnose-bug]
+verify_jwt = false
