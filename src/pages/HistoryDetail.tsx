@@ -207,7 +207,6 @@ export default function HistoryDetail() {
                 <div className="mt-1 p-3 rounded-md bg-muted/50 border border-border">
                   <CollapsibleText text={run.failing_input} className="text-xs font-mono" />
                 </div>
-                </div>
               </div>
               {(run.output_buggy || run.output_correct) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
