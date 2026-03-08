@@ -127,7 +127,10 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
               </span>
               <div className="space-y-1.5">
                 <div>
-                  <span className="text-[10px] text-muted-foreground font-mono">INPUT</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground font-mono">INPUT</span>
+                    <CopyButton text={diagnosis.failing_test.input} />
+                  </div>
                   <div className="text-xs text-foreground bg-secondary/40 rounded p-1.5 mt-0.5">
                     <CollapsibleText text={diagnosis.failing_test.input} className="text-xs font-mono" maxLines={4} maxChars={200} />
                   </div>
