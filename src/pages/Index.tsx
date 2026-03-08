@@ -289,10 +289,10 @@ const Index = () => {
         {/* Row 1: Code Editors */}
         <div className="grid grid-cols-1 md:grid-cols-2 border-b border-border" style={{ height: "clamp(300px, 50vh, 560px)" }}>
           <div className="h-[280px] md:h-full border-b md:border-b-0 md:border-r border-border">
-            <CodeEditorPanel label="Your Code (Buggy)" language={language} value={buggyCode} onChange={setBuggyCode} />
+            <CodeEditorPanel label="Your Code (Buggy)" language="cpp" value={buggyCode} onChange={setBuggyCode} />
           </div>
           <div className="h-[280px] md:h-full">
-            <CodeEditorPanel label="Correct Code (Reference)" language={language} value={correctCode} onChange={setCorrectCode} />
+            <CodeEditorPanel label="Correct Code (Reference)" language="cpp" value={correctCode} onChange={setCorrectCode} />
           </div>
         </div>
 
