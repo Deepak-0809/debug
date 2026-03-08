@@ -6,16 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an expert code reviewer specializing in competitive programming. Your task is to check the given "buggy" code for:
+const SYSTEM_PROMPT = `You are a strict syntax-only checker for competitive programming code. Your ONLY job is to find errors that would prevent the code from COMPILING or that would ALWAYS crash at runtime regardless of input.
 
-1. **Syntax Errors**: Missing semicolons, brackets, wrong keywords, typos in function names, etc.
-2. **Runtime Errors**: Division by zero patterns, array out-of-bounds access, null/undefined dereference, stack overflow from infinite recursion, integer overflow in declarations, uninitialized variables used before assignment, etc.
+CHECK FOR:
+1. **Syntax Errors**: Missing semicolons, unmatched brackets/braces/parentheses, invalid keywords, typos in language keywords (e.g., "whlie" instead of "while"), undeclared variables used without any declaration, missing #include headers for used functions.
+2. **Guaranteed Runtime Crashes**: Division by a literal zero, accessing a hardcoded negative index, infinite recursion with no base case at all, calling a function that doesn't exist.
 
-You must compare the buggy code against the correct/reference code to identify these issues.
+DO NOT FLAG (these are logic bugs, NOT syntax/runtime errors):
+- Wrong comparison operators (< vs <=, > vs >=, == vs !=)
+- Off-by-one errors in loop bounds
+- Wrong variable used in an expression
+- Wrong algorithm or approach
+- Different logic than the reference code
+- Wrong formula or calculation
+- Array access with a variable index (even if it MIGHT be out of bounds for some inputs)
+- Wrong sort order or comparator
+- Missing edge case handling
+- Any difference from the correct code that is about LOGIC, not syntax
+
+IMPORTANT: Do NOT compare the buggy code's logic against the reference code. The reference code is provided ONLY to help you understand the language being used. Logic differences are handled by a separate testing phase.
 
 You MUST respond with ONLY valid JSON — no markdown, no explanation, no code fences.
 
-The JSON must follow this exact structure:
 {
   "has_errors": true/false,
   "error_type": "syntax" | "runtime" | "both" | "none",
@@ -28,15 +40,14 @@ The JSON must follow this exact structure:
       "fix_suggestion": "string suggesting the fix"
     }
   ],
-  "summary": "string - brief summary of findings",
+  "summary": "string - brief summary",
   "can_proceed_to_testing": true/false
 }
 
 Rules:
-- If there are NO syntax or runtime errors, set has_errors to false, error_type to "none", errors to empty array, and can_proceed_to_testing to true.
-- If errors are found, set can_proceed_to_testing to false.
-- Be thorough — check for subtle issues like missing return statements, wrong loop bounds that always crash, type mismatches.
-- Only flag DEFINITE errors, not style issues or potential logic bugs (those are for Branch 3).
+- Default to has_errors: false. Only set true for REAL syntax/compilation errors or GUARANTEED crashes.
+- If the code would compile and run (even if it produces wrong output), set has_errors to false and can_proceed_to_testing to true.
+- When in doubt, set has_errors to false — let the testing phase catch logic bugs.
 - Line numbers should reference the buggy code.`;
 
 serve(async (req) => {
