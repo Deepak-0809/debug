@@ -11,17 +11,37 @@ import {
 } from "@/components/ui/select";
 import { Search, Play } from "lucide-react";
 
+const LANGUAGE_CONSTRAINTS: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
+  cpp: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+    { key: "timeLimit", label: "Time limit (seconds)", placeholder: "e.g., 2", type: "number" },
+  ],
+  python: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+  ],
+  java: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+    { key: "memoryLimit", label: "Memory limit (MB)", placeholder: "e.g., 256", type: "number" },
+  ],
+  javascript: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+  ],
+};
+
 interface ConfigPanelProps {
   language: string;
   onLanguageChange: (lang: string) => void;
   sampleInput: string;
   onSampleInputChange: (val: string) => void;
-  maxN: string;
-  onMaxNChange: (val: string) => void;
-  testCasesT: string;
-  onTestCasesTChange: (val: string) => void;
-  valueRange: string;
-  onValueRangeChange: (val: string) => void;
+  constraints: Record<string, string>;
+  onConstraintChange: (key: string, val: string) => void;
   onFindFailing: () => void;
   onRunSingle: () => void;
   loading: boolean;
