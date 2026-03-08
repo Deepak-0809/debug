@@ -155,7 +155,9 @@ const Index = () => {
         toast.success("Test passed — outputs match!");
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Execution failed");
+      const message = err instanceof Error ? err.message : "Execution failed";
+      toast.error(message);
+      setDiagnosis({ scenario: "syntax_error", verdict: `Error: ${message}. Please try again.`, failing_test: null, issues: [], root_cause: null, improvements: [] });
     } finally {
       setSingleTestLoading(false);
     }
