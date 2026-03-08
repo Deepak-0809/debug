@@ -18,6 +18,9 @@ import {
   AlertTriangle,
   Code,
   FileText,
+  MessageCircle,
+  Bot,
+  User,
   Sun,
   Moon,
 } from "lucide-react";
@@ -69,6 +72,7 @@ export default function HistoryDetail() {
   const [run, setRun] = useState<Run | null>(null);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string; created_at: string }[]>([]);
   const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") !== "light");
 
   const toggleTheme = () => {
@@ -84,11 +88,16 @@ export default function HistoryDetail() {
 
     const fetchRun = async () => {
       setLoading(true);
-      const [{ data: runData, error: runError }, { data: tcData }] = await Promise.all([
+      const [{ data: runData, error: runError }, { data: tcData }, { data: chatData }] = await Promise.all([
         supabase.from("runs").select("*").eq("id", id).eq("user_id", user.id).single(),
         supabase
           .from("test_cases")
           .select("*")
+          .eq("run_id", id)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("chat_messages")
+          .select("role, content, created_at")
           .eq("run_id", id)
           .order("created_at", { ascending: true }),
       ]);
@@ -101,6 +110,7 @@ export default function HistoryDetail() {
 
       setRun(runData as Run);
       setTestCases((tcData || []) as TestCase[]);
+      setChatMessages((chatData || []) as any[]);
       setLoading(false);
     };
 
@@ -348,6 +358,43 @@ export default function HistoryDetail() {
               <pre className="text-xs font-mono whitespace-pre-wrap text-muted-foreground">
                 {JSON.stringify(run.constraints_json, null, 2)}
               </pre>
+            </div>
+          </section>
+        )}
+
+        {/* AI Chat History */}
+        {chatMessages.length > 0 && (
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" /> AI Chat ({chatMessages.length} messages)
+            </h2>
+            <div className="space-y-2">
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.role === "assistant" && (
+                    <div className="shrink-0 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mt-1">
+                      <Bot className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+                  </div>
+                  {msg.role === "user" && (
+                    <div className="shrink-0 h-6 w-6 rounded-full bg-secondary flex items-center justify-center mt-1">
+                      <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </section>
         )}
