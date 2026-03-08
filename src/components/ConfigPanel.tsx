@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Play, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 
 interface ConfigPanelProps {
   additionalInfo: string;
@@ -10,6 +11,7 @@ interface ConfigPanelProps {
   onFindFailing: () => void;
   onRunSingle: () => void;
   loading: boolean;
+  progressStep?: string;
 }
 
 export default function ConfigPanel({
@@ -18,6 +20,7 @@ export default function ConfigPanel({
   onFindFailing,
   onRunSingle,
   loading,
+  progressStep,
 }: ConfigPanelProps) {
   return (
     <div className="flex h-full flex-col">
@@ -43,6 +46,22 @@ export default function ConfigPanel({
             </p>
           </div>
 
+          {loading && progressStep && (
+            <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <span className="text-xs font-medium text-foreground">{progressStep}</span>
+              </div>
+              <Progress value={undefined} className="h-1.5" />
+            </div>
+          )}
+
+          {!loading && progressStep && (
+            <div className="rounded-md border border-border bg-secondary/20 p-3">
+              <span className="text-xs font-medium text-muted-foreground">{progressStep}</span>
+            </div>
+          )}
+
           <div className="space-y-3 pt-2">
             <Button
               className="w-full gap-2"
@@ -54,7 +73,7 @@ export default function ConfigPanel({
               ) : (
                 <Play className="h-4 w-4" />
               )}
-              {loading ? "Analyzing..." : "🔍 Find Failing Test Case"}
+              {loading ? "Processing..." : "🔍 Find Failing Test Case"}
             </Button>
             <Button
               variant="outline"
