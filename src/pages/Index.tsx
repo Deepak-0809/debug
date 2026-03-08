@@ -57,6 +57,7 @@ const Index = () => {
       }).select("id").single();
       if (insertError) console.error("Failed to store run:", insertError);
       const runId = runData?.id;
+      if (runId) setCurrentRunId(runId);
 
       setProgressStep("Step 2/5: Checking for syntax & runtime errors...");
       const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode, correctCode, language: detectedLanguage } });
