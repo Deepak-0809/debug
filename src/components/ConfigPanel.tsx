@@ -91,7 +91,7 @@ export default function ConfigPanel({
           {loading ? "Processing..." : "Find Failing Test Case"}
         </Button>
         <p className="text-[11px] text-muted-foreground mt-1.5">
-          AI auto-detects language and input format
+          Language & input format are used for code execution
         </p>
       </div>
     </div>
