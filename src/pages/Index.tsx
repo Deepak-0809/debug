@@ -103,8 +103,10 @@ const Index = () => {
       setProgressStep("Diagnosis complete.");
       toast.success("🔍 Diagnosis complete!");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Analysis failed");
-      setProgressStep("");
+      const message = err instanceof Error ? err.message : "Analysis failed";
+      toast.error(message);
+      setDiagnosis({ scenario: "syntax_error", verdict: `Error: ${message}. Please try again.`, failing_test: null, issues: [], root_cause: null, improvements: [] });
+      setProgressStep("Error — try again.");
     } finally {
       setLoading(false);
     }
