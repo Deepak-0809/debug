@@ -11,6 +11,19 @@ import AIChatPanel from "@/components/AIChatPanel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+// Strip markdown code fences and trailing non-code content from pasted code
+const sanitizeCode = (code: string): string => {
+  let cleaned = code.trim();
+  // Remove leading ```lang and trailing ```
+  cleaned = cleaned.replace(/^```[\w]*\s*\n?/, "").replace(/\n?```\s*$/, "");
+  // Remove everything after a closing ``` that appears mid-text (user pasted markdown with test cases)
+  const fenceEnd = cleaned.indexOf("\n```");
+  if (fenceEnd !== -1) {
+    cleaned = cleaned.substring(0, fenceEnd).trim();
+  }
+  return cleaned;
+};
+
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
