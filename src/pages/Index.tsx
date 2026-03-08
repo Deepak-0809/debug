@@ -11,6 +11,7 @@ import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import { toast } from "sonner";
 
+// Debug app main page
 const Index = () => {
   const { user, signOut } = useAuth();
   const [buggyCode, setBuggyCode] = useState("");
