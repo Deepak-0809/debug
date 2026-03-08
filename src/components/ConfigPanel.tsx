@@ -77,7 +77,7 @@ export default function ConfigPanel({
             {analysisResult && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-primary" />
                   <span className="text-xs font-medium text-foreground">
                     Analysis Complete — {analysisResult.problem_meta
                       ? (analysisResult.problem_meta as Record<string, string>).name
