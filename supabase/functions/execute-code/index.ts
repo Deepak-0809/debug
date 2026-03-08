@@ -1,8 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 
-const JUDGE0_URL = "https://judge0-ce.p.rapidapi.com";
-const RAPIDAPI_KEY = Deno.env.get("JUDGE0_RAPIDAPI_KEY") || "";
+const JUDGE0_URL = "https://ce.judge0.com";
 
 const LANGUAGE_MAP: Record<string, number> = {
   cpp: 54,
@@ -28,6 +27,29 @@ function fromBase64(str: string): string {
   }
 }
 
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 3,
+  delayMs = 2000
+): Promise<Response> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const res = await fetch(url, options);
+    if (res.ok) return res;
+    
+    // Retry on 429 (rate limit) or 5xx server errors
+    if ((res.status === 429 || res.status >= 500) && attempt < retries - 1) {
+      console.log(`Judge0 returned ${res.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${retries})...`);
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+      continue;
+    }
+    
+    const errText = await res.text();
+    throw new Error(`Judge0 request failed [${res.status}]: ${errText}`);
+  }
+  throw new Error("Judge0 request failed after retries");
+}
+
 async function submitBatch(
   submissions: { language_id: number; source_code: string; stdin: string }[]
 ): Promise<{ token: string }[]> {
@@ -39,25 +61,14 @@ async function submitBatch(
     memory_limit: 256000,
   }));
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (RAPIDAPI_KEY) {
-    headers["X-RapidAPI-Key"] = RAPIDAPI_KEY;
-    headers["X-RapidAPI-Host"] = "judge0-ce.p.rapidapi.com";
-  }
-
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
     {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ submissions: encoded }),
     }
   );
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Judge0 submit failed [${res.status}]: ${errText}`);
-  }
 
   return await res.json();
 }
@@ -69,22 +80,21 @@ async function pollResults(
   const tokenStr = tokens.join(",");
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 2000));
 
-    const headers: Record<string, string> = {};
-    if (RAPIDAPI_KEY) {
-      headers["X-RapidAPI-Key"] = RAPIDAPI_KEY;
-      headers["X-RapidAPI-Host"] = "judge0-ce.p.rapidapi.com";
-    }
-
-    const res = await fetch(
-      `${JUDGE0_URL}/submissions/batch?tokens=${tokenStr}&base64_encoded=true&fields=token,stdout,stderr,status,compile_output,time,memory`,
-      { method: "GET", headers }
-    );
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Judge0 poll failed [${res.status}]: ${errText}`);
+    let res: Response;
+    try {
+      res = await fetchWithRetry(
+        `${JUDGE0_URL}/submissions/batch?tokens=${tokenStr}&base64_encoded=true&fields=token,stdout,stderr,status,compile_output,time,memory`,
+        { method: "GET" },
+        2,
+        1500
+      );
+    } catch (e) {
+      // If polling fails, wait longer and retry the outer loop
+      console.error(`Poll attempt ${attempt} failed:`, e);
+      await new Promise((r) => setTimeout(r, 3000));
+      continue;
     }
 
     const data = await res.json();
@@ -135,7 +145,6 @@ serve(async (req) => {
     );
 
     if (validTestCases.length === 0) {
-      // Return 200 with error info so frontend can handle it
       return new Response(
         JSON.stringify({
           compilation_error: true,
@@ -154,11 +163,18 @@ serve(async (req) => {
       submissions.push({ language_id: langId, source_code: correctCode, stdin: tc.input });
     }
 
-    const BATCH_SIZE = 20;
+    // Use smaller batches to avoid rate limiting on free tier
+    const BATCH_SIZE = 10;
     const allResults: any[] = [];
 
     for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
       const batch = submissions.slice(i, i + BATCH_SIZE);
+      
+      // Add delay between batches to avoid rate limiting
+      if (i > 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      
       const tokens = await submitBatch(batch);
       const tokenList = tokens.map((t: any) => t.token);
       const results = await pollResults(tokenList);
@@ -215,7 +231,6 @@ serve(async (req) => {
       });
     }
 
-    // Return compilation errors with 200 so frontend can route to diagnosis
     if (hasCompileError) {
       const failingCases = executionResults.filter((r) => r.is_failing);
       return new Response(
@@ -237,7 +252,6 @@ serve(async (req) => {
     const failingCases = executionResults.filter((r) => r.is_failing);
     const firstFailing = failingCases.length > 0 ? failingCases[0] : null;
 
-    // Store results in DB if runId provided using authenticated client
     if (runId) {
       for (const result of executionResults) {
         if (result.test_case_id) {
