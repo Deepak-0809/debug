@@ -27,6 +27,8 @@ export default function ConfigPanel({
   onFindFailing,
   loading,
   progressStep,
+  language,
+  onLanguageChange,
 }: ConfigPanelProps) {
   return (
     <div className="flex flex-col h-full">
