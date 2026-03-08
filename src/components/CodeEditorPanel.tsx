@@ -20,14 +20,100 @@ const languageMap: Record<string, string> = {
 export default function CodeEditorPanel({ label, language, value, onChange }: CodeEditorPanelProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  const handleEditorMount = (ed: editor.IStandaloneCodeEditor) => {
+  const handleEditorMount = (ed: editor.IStandaloneCodeEditor, monaco: any) => {
     editorRef.current = ed;
 
-    // Focus the editor on click
+    // Override copy with Clipboard API
+    ed.addAction({
+      id: "custom-copy",
+      label: "Copy",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC],
+      run: (editor) => {
+        const selection = editor.getSelection();
+        const model = editor.getModel();
+        if (selection && model) {
+          const text = model.getValueInRange(selection);
+          if (text) {
+            navigator.clipboard.writeText(text).catch(() => {});
+          }
+        }
+      },
+    });
+
+    // Override paste with Clipboard API
+    ed.addAction({
+      id: "custom-paste",
+      label: "Paste",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV],
+      run: async (editor) => {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            const selection = editor.getSelection();
+            if (selection) {
+              editor.executeEdits("paste", [
+                { range: selection, text, forceMoveMarkers: true },
+              ]);
+            }
+          }
+        } catch {
+          // Clipboard API not available, try fallback
+          console.warn("Clipboard read not available");
+        }
+      },
+    });
+
+    // Override cut with Clipboard API
+    ed.addAction({
+      id: "custom-cut",
+      label: "Cut",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX],
+      run: async (editor) => {
+        const selection = editor.getSelection();
+        const model = editor.getModel();
+        if (selection && model) {
+          const text = model.getValueInRange(selection);
+          if (text) {
+            await navigator.clipboard.writeText(text).catch(() => {});
+            editor.executeEdits("cut", [
+              { range: selection, text: "", forceMoveMarkers: true },
+            ]);
+          } else {
+            // Cut entire line when nothing selected (default Monaco behavior)
+            const line = selection.startLineNumber;
+            const lineContent = model.getLineContent(line);
+            await navigator.clipboard.writeText(lineContent + "\n").catch(() => {});
+            const range = {
+              startLineNumber: line,
+              startColumn: 1,
+              endLineNumber: line + 1,
+              endColumn: 1,
+            };
+            editor.executeEdits("cut", [
+              { range, text: "", forceMoveMarkers: true },
+            ]);
+          }
+        }
+      },
+    });
+
+    // Select All
+    ed.addAction({
+      id: "custom-select-all",
+      label: "Select All",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA],
+      run: (editor) => {
+        const model = editor.getModel();
+        if (model) {
+          editor.setSelection(model.getFullModelRange());
+        }
+      },
+    });
+
+    // Focus highlight
     ed.onDidFocusEditorText(() => {
       ed.updateOptions({ renderLineHighlight: "all" });
     });
-
     ed.onDidBlurEditorText(() => {
       ed.updateOptions({ renderLineHighlight: "none" });
     });
@@ -58,22 +144,18 @@ export default function CodeEditorPanel({ label, language, value, onChange }: Co
             insertSpaces: true,
             wordWrap: "on",
             padding: { top: 12, bottom: 12 },
-            // Smooth editing experience
             smoothScrolling: true,
             cursorBlinking: "smooth",
             cursorSmoothCaretAnimation: "on",
             cursorStyle: "line",
             cursorWidth: 2,
-            // Bracket & indent guides
             bracketPairColorization: { enabled: true },
             guides: { bracketPairs: true, indentation: true, highlightActiveIndentation: true },
             renderLineHighlight: "all",
             renderLineHighlightOnlyWhenFocus: true,
-            // Selection
             multiCursorModifier: "ctrlCmd",
             occurrencesHighlight: "singleFile",
             selectionHighlight: true,
-            // Scrollbar
             scrollbar: {
               verticalScrollbarSize: 8,
               horizontalScrollbarSize: 8,
@@ -82,33 +164,25 @@ export default function CodeEditorPanel({ label, language, value, onChange }: Co
             overviewRulerBorder: false,
             overviewRulerLanes: 0,
             hideCursorInOverviewRuler: true,
-            // Auto features
             autoClosingBrackets: "always",
             autoClosingQuotes: "always",
             autoIndent: "advanced",
-            formatOnPaste: true,
-            formatOnType: true,
-            // Code intelligence
+            formatOnPaste: false,
+            formatOnType: false,
             suggest: { showWords: true, showSnippets: true, preview: true, shareSuggestSelections: true },
             quickSuggestions: { other: true, comments: false, strings: false },
             acceptSuggestionOnCommitCharacter: true,
             suggestOnTriggerCharacters: true,
-            // Code folding
             folding: true,
             foldingHighlight: true,
             showFoldingControls: "mouseover",
-            // Matching
             matchBrackets: "always",
-            // Mouse features
             mouseWheelZoom: true,
             dragAndDrop: true,
-            // Clipboard
-            copyWithSyntaxHighlighting: true,
-            // Line decorations
+            copyWithSyntaxHighlighting: false,
             glyphMargin: false,
             lineDecorationsWidth: 8,
             lineNumbersMinChars: 3,
-            // Misc UX
             links: true,
             contextmenu: true,
             columnSelection: false,
