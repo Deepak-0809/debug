@@ -18,6 +18,9 @@ import {
   AlertTriangle,
   Code,
   FileText,
+  MessageCircle,
+  Bot,
+  User,
   Sun,
   Moon,
 } from "lucide-react";
