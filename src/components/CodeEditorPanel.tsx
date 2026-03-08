@@ -37,7 +37,35 @@ export default function CodeEditorPanel({ label, language, value, onChange }: Co
             automaticLayout: true,
             tabSize: 2,
             wordWrap: "on",
-            padding: { top: 12 },
+            padding: { top: 12, bottom: 12 },
+            smoothScrolling: true,
+            cursorBlinking: "smooth",
+            cursorSmoothCaretAnimation: "on",
+            renderLineHighlight: "all",
+            bracketPairColorization: { enabled: true },
+            guides: {
+              bracketPairs: true,
+              indentation: true,
+            },
+            scrollbar: {
+              verticalScrollbarSize: 8,
+              horizontalScrollbarSize: 8,
+              verticalSliderSize: 8,
+            },
+            fontLigatures: true,
+            mouseWheelZoom: true,
+            suggest: {
+              showWords: true,
+              showSnippets: true,
+            },
+            quickSuggestions: true,
+            formatOnPaste: true,
+            autoClosingBrackets: "always",
+            autoClosingQuotes: "always",
+            autoIndent: "advanced",
+            folding: true,
+            foldingHighlight: true,
+            matchBrackets: "always",
           }}
         />
       </div>
