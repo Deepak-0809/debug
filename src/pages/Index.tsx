@@ -48,10 +48,7 @@ const Index = () => {
   const [buggyCode, setBuggyCode] = useState(DEFAULT_CODE.cpp);
   const [correctCode, setCorrectCode] = useState("");
   const [sampleInput, setSampleInput] = useState("");
-  const [maxN, setMaxN] = useState("");
-  const [testCasesT, setTestCasesT] = useState("");
-  const [valueRange, setValueRange] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [constraints, setConstraints] = useState<Record<string, string>>({});
 
   const handleLanguageChange = (lang: string) => {
     setLanguage(lang);

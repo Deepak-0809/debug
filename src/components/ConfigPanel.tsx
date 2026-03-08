@@ -88,7 +88,7 @@ export default function ConfigPanel({
           <Label className="text-foreground text-sm">Sample Input (Optional)</Label>
           <Textarea
             placeholder="Paste a sample input from the problem..."
-            className="min-h-[100px] font-mono text-xs"
+            className="min-h-[100px] font-mono text-xs text-foreground"
             value={sampleInput}
             onChange={(e) => onSampleInputChange(e.target.value)}
           />
