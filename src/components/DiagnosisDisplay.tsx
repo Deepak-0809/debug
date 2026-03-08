@@ -137,7 +137,10 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <span className="text-[10px] text-red-400 font-mono">YOUR OUTPUT</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-red-400 font-mono">YOUR OUTPUT</span>
+                      <CopyButton text={diagnosis.failing_test.buggy_output} />
+                    </div>
                     <div className="text-xs text-red-300 bg-red-500/10 rounded p-1.5 mt-0.5">
                       <CollapsibleText text={diagnosis.failing_test.buggy_output} className="text-xs font-mono" maxLines={4} maxChars={200} />
                     </div>
