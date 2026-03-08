@@ -23,6 +23,7 @@ export type Database = {
           id: string
           name: string | null
           total_runs: number
+          username: string | null
         }
         Insert: {
           auth_provider?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           id: string
           name?: string | null
           total_runs?: number
+          username?: string | null
         }
         Update: {
           auth_provider?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           id?: string
           name?: string | null
           total_runs?: number
+          username?: string | null
         }
         Relationships: []
       }

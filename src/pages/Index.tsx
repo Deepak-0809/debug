@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
   const [buggyCode, setBuggyCode] = useState("");
   const [correctCode, setCorrectCode] = useState("");
@@ -198,7 +198,7 @@ const Index = () => {
           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </Button>
-          <span className="text-xs text-muted-foreground hidden md:inline truncate max-w-[140px]">{user?.email}</span>
+          <span className="text-xs text-muted-foreground hidden md:inline truncate max-w-[140px] font-medium">@{username || "user"}</span>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={signOut}>
             <LogOut className="h-3.5 w-3.5" />
           </Button>
