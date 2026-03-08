@@ -11,6 +11,19 @@ import AIChatPanel from "@/components/AIChatPanel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+// Strip markdown code fences and trailing non-code content from pasted code
+const sanitizeCode = (code: string): string => {
+  let cleaned = code.trim();
+  // Remove leading ```lang and trailing ```
+  cleaned = cleaned.replace(/^```[\w]*\s*\n?/, "").replace(/\n?```\s*$/, "");
+  // Remove everything after a closing ``` that appears mid-text (user pasted markdown with test cases)
+  const fenceEnd = cleaned.indexOf("\n```");
+  if (fenceEnd !== -1) {
+    cleaned = cleaned.substring(0, fenceEnd).trim();
+  }
+  return cleaned;
+};
+
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
@@ -44,12 +57,15 @@ const Index = () => {
     if (!buggyCode.trim()) { toast.error("Please paste your buggy code"); return; }
     if (!correctCode.trim()) { toast.error("Please paste the correct reference code"); return; }
 
+    const cleanBuggy = sanitizeCode(buggyCode);
+    const cleanCorrect = sanitizeCode(correctCode);
+
     setLoading(true);
     setDiagnosis(null);
 
     try {
       setProgressStep("Step 1/5: Analyzing problem structure...");
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", { body: { buggyCode, correctCode, additionalInfo } });
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo } });
       if (analysisError) throw new Error(analysisError.message || "Analysis failed");
       if (analysisData?.error) throw new Error(analysisData.error);
       if (!analysisData?.schema) throw new Error("No analysis result");
@@ -58,7 +74,7 @@ const Index = () => {
       const detectedLanguage = schema?.problem_meta?.problem_type || "cpp";
 
       const { data: runData, error: insertError } = await supabase.from("runs").insert({
-        user_id: user!.id, buggy_code: buggyCode, correct_code: correctCode, language: detectedLanguage,
+        user_id: user!.id, buggy_code: cleanBuggy, correct_code: cleanCorrect, language: detectedLanguage,
         constraints_json: schema, status: "analyzed", sample_input: additionalInfo || null,
       }).select("id").single();
       if (insertError) console.error("Failed to store run:", insertError);
@@ -66,7 +82,7 @@ const Index = () => {
       if (runId) setCurrentRunId(runId);
 
       setProgressStep("Step 2/5: Checking for syntax & runtime errors...");
-      const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode, correctCode, language: detectedLanguage } });
+      const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage } });
       if (syntaxError) throw new Error(syntaxError.message || "Syntax check failed");
       if (syntaxData?.error) throw new Error(syntaxData.error);
       const syntaxResult = syntaxData?.result;
@@ -81,7 +97,7 @@ const Index = () => {
       if (syntaxResult?.has_errors) {
         toast.warning(`Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s).`);
         setProgressStep("Step 5/5: AI diagnosing syntax errors...");
-        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode, correctCode, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId } });
+        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId } });
         if (diagError) throw new Error(diagError.message || "Diagnosis failed");
         if (diagData?.error) throw new Error(diagData.error);
         if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
@@ -109,13 +125,13 @@ const Index = () => {
         if (dbTestCases && dbTestCases.length > 0) storedTestCases = dbTestCases.map((tc) => ({ id: tc.id, input: tc.input_data }));
       }
 
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode, correctCode, language: detectedLanguage, testCases: storedTestCases, runId } });
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, testCases: storedTestCases, runId } });
       if (execError) throw new Error(execError.message || "Code execution failed");
       if (execData?.retry_branch1) { toast.error(`Execution error: ${execData.message}. Restarting...`); setLoading(false); handleFindFailing(); return; }
       if (execData?.error) throw new Error(execData.error);
 
       setProgressStep("Step 5/5: AI diagnosing...");
-      const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode, correctCode, language: detectedLanguage, syntaxErrors: null, executionResults: execData, runId } });
+      const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: null, executionResults: execData, runId } });
       if (diagError) throw new Error(diagError.message || "Diagnosis failed");
       if (diagData?.error) throw new Error(diagData.error);
       if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
@@ -142,13 +158,16 @@ const Index = () => {
     if (!correctCode.trim()) { toast.error("Please paste the correct reference code"); return; }
     if (!testInput.trim()) { toast.error("Please enter test input"); return; }
 
+    const cleanBuggy = sanitizeCode(buggyCode);
+    const cleanCorrect = sanitizeCode(correctCode);
+
     setSingleTestLoading(true);
     setDiagnosis(null);
 
     try {
       const testCases = [{ id: null, input: testInput }];
       toast.info("Running your test case...");
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode, correctCode, language: "cpp", testCases, runId: null } });
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: "cpp", testCases, runId: null } });
       if (execError) throw new Error(execError.message || "Execution failed");
       if (execData?.error) throw new Error(execData.error);
       if (execData?.retry_branch1) throw new Error(execData.message || "Compilation error. Check your code.");
@@ -199,7 +218,7 @@ const Index = () => {
         toast.info("Runtime error detected — getting AI diagnosis...");
         const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", {
           body: {
-            buggyCode, correctCode, language: "cpp",
+            buggyCode: cleanBuggy, correctCode: cleanCorrect, language: "cpp",
             syntaxErrors: null,
             executionResults: {
               results: [result],
