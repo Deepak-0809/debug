@@ -189,13 +189,23 @@ const Index = () => {
     const cleanBuggy = sanitizeCode(buggyCode);
     const cleanCorrect = sanitizeCode(correctCode);
 
+    // Detect language from code syntax
+    const detectLanguage = (code: string): string => {
+      if (/#include|using namespace|int main|cout|cin/.test(code)) return "cpp";
+      if (/import java|public class|System\.out/.test(code)) return "java";
+      if (/^def |^import |print\(|input\(/.test(code)) return "python";
+      if (/console\.log|function |const |let |=>/.test(code)) return "javascript";
+      return "cpp";
+    };
+    const detectedLang = detectLanguage(cleanBuggy) || detectLanguage(cleanCorrect) || "cpp";
+
     setSingleTestLoading(true);
     setDiagnosis(null);
 
     try {
       const testCases = [{ id: null, input: testInput }];
-      toast.info("Running your test case...");
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: "cpp", testCases, runId: null } });
+      toast.info(`Running your test case (${detectedLang})...`);
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLang, testCases, runId: null } });
       if (execError) throw new Error(execError.message || "Execution failed");
       if (execData?.error) throw new Error(execData.error);
       if (execData?.retry_branch1) throw new Error(execData.message || "Compilation error. Check your code.");
