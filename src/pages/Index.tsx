@@ -180,7 +180,7 @@ const Index = () => {
   };
 
   return (
-    <div className="dark flex h-screen flex-col bg-background">
+    <div className={`${isDark ? "dark" : ""} flex h-screen flex-col bg-background`}>
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between border-b border-border px-3 sm:px-4 py-2">
         <div className="flex items-center gap-2">
