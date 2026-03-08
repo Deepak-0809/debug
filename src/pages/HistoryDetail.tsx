@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import CollapsibleText from "@/components/CollapsibleText";
 import CopyButton from "@/components/CopyButton";
 import DiagnosisDisplay from "@/components/DiagnosisDisplay";
+import AIChatPanel from "@/components/AIChatPanel";
 import {
   ArrowLeft,
   Clock,
