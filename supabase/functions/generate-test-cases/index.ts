@@ -45,6 +45,49 @@ Rules:
 - The input string should use \\n between lines.
 - DO NOT generate test cases with N > 500 since you must write out all numbers literally.`;
 
+function extractJsonFromResponse(response: string): any {
+  let cleaned = response
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  const jsonStart = cleaned.search(/[\{\[]/);
+  const lastBrace = cleaned.lastIndexOf("}");
+  const lastBracket = cleaned.lastIndexOf("]");
+  const jsonEnd = Math.max(lastBrace, lastBracket);
+
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error("No JSON object found in response");
+  }
+
+  cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fix common issues: trailing commas, control chars, truncated arrays
+    cleaned = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x1F\x7F]/g, (c) => c === "\n" || c === "\t" ? c : "");
+
+    // If JSON is truncated, try to close it
+    const openBraces = (cleaned.match(/{/g) || []).length;
+    const closeBraces = (cleaned.match(/}/g) || []).length;
+    const openBrackets = (cleaned.match(/\[/g) || []).length;
+    const closeBrackets = (cleaned.match(/]/g) || []).length;
+
+    // Close unclosed brackets/braces
+    for (let i = 0; i < openBrackets - closeBrackets; i++) cleaned += "]";
+    for (let i = 0; i < openBraces - closeBraces; i++) cleaned += "}";
+
+    // Remove trailing comma before closing
+    cleaned = cleaned.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+
+    return JSON.parse(cleaned);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
