@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import CollapsibleText from "@/components/CollapsibleText";
 import DiagnosisDisplay from "@/components/DiagnosisDisplay";
 import {
   ArrowLeft,
@@ -199,9 +200,9 @@ export default function HistoryDetail() {
             <div className="rounded-lg border border-border bg-card p-4 space-y-3">
               <div>
                 <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
-                <pre className="mt-1 p-3 rounded-md bg-muted/50 border border-border text-xs font-mono whitespace-pre-wrap break-all">
-                  {run.failing_input}
-                </pre>
+                <div className="mt-1 p-3 rounded-md bg-muted/50 border border-border">
+                  <CollapsibleText text={run.failing_input} className="text-xs font-mono" />
+                </div>
               </div>
               {(run.output_buggy || run.output_correct) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -269,9 +270,9 @@ export default function HistoryDetail() {
                       <span className="text-[10px] font-mono text-muted-foreground uppercase">
                         Input
                       </span>
-                      <pre className="mt-0.5 p-2 rounded bg-muted/40 border border-border text-xs font-mono whitespace-pre-wrap break-all">
-                        {tc.input_data}
-                      </pre>
+                      <div className="mt-0.5 p-2 rounded bg-muted/40 border border-border text-xs font-mono">
+                        <CollapsibleText text={tc.input_data} className="text-xs font-mono" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {tc.output_buggy !== null && (
@@ -279,15 +280,15 @@ export default function HistoryDetail() {
                           <span className="text-[10px] font-mono text-muted-foreground uppercase">
                             Your Output
                           </span>
-                          <pre
-                            className={`mt-0.5 p-2 rounded border text-xs font-mono whitespace-pre-wrap break-all ${
+                          <div
+                            className={`mt-0.5 p-2 rounded border text-xs font-mono ${
                               tc.is_failing
                                 ? "bg-destructive/5 border-destructive/20 text-destructive"
                                 : "bg-muted/40 border-border"
                             }`}
                           >
-                            {tc.output_buggy}
-                          </pre>
+                            <CollapsibleText text={tc.output_buggy} className="text-xs font-mono" />
+                          </div>
                         </div>
                       )}
                       {tc.output_correct !== null && (
@@ -295,9 +296,9 @@ export default function HistoryDetail() {
                           <span className="text-[10px] font-mono text-muted-foreground uppercase">
                             Expected
                           </span>
-                          <pre className="mt-0.5 p-2 rounded bg-primary/5 border border-primary/20 text-xs font-mono whitespace-pre-wrap break-all">
-                            {tc.output_correct}
-                          </pre>
+                          <div className="mt-0.5 p-2 rounded bg-primary/5 border border-primary/20 text-xs font-mono">
+                            <CollapsibleText text={tc.output_correct} className="text-xs font-mono" />
+                          </div>
                         </div>
                       )}
                     </div>
