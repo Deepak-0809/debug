@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Bug, LogOut, History } from "lucide-react";
+import { Bug, LogOut, History, Sun, Moon } from "lucide-react";
 import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import RunSingleTestPanel from "@/components/RunSingleTestPanel";
