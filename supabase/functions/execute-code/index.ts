@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 
-const JUDGE0_URL = "https://ce.judge0.com";
+const JUDGE0_URL = "https://judge0-ce.p.rapidapi.com";
+const RAPIDAPI_KEY = Deno.env.get("JUDGE0_RAPIDAPI_KEY") || "";
 
 const LANGUAGE_MAP: Record<string, number> = {
   cpp: 54,
@@ -38,11 +39,17 @@ async function submitBatch(
     memory_limit: 256000,
   }));
 
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (RAPIDAPI_KEY) {
+    headers["X-RapidAPI-Key"] = RAPIDAPI_KEY;
+    headers["X-RapidAPI-Host"] = "judge0-ce.p.rapidapi.com";
+  }
+
   const res = await fetch(
     `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ submissions: encoded }),
     }
   );
@@ -64,9 +71,15 @@ async function pollResults(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await new Promise((r) => setTimeout(r, 1500));
 
+    const headers: Record<string, string> = {};
+    if (RAPIDAPI_KEY) {
+      headers["X-RapidAPI-Key"] = RAPIDAPI_KEY;
+      headers["X-RapidAPI-Host"] = "judge0-ce.p.rapidapi.com";
+    }
+
     const res = await fetch(
       `${JUDGE0_URL}/submissions/batch?tokens=${tokenStr}&base64_encoded=true&fields=token,stdout,stderr,status,compile_output,time,memory`,
-      { method: "GET" }
+      { method: "GET", headers }
     );
 
     if (!res.ok) {
