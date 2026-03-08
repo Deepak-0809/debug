@@ -11,33 +11,82 @@ const SYSTEM_PROMPT = `You are an expert test case generator for competitive pro
 
 You MUST respond with ONLY valid JSON — no markdown, no explanation, no code fences.
 
+CRITICAL RULES:
+- Every "input" field must contain ONLY the literal test input string with \\n for newlines.
+- NEVER use code expressions, Python snippets, string concatenation, or any programming constructs in JSON values.
+- For large test cases, generate the ACTUAL numbers directly. If a test case would be too large to write out, use a SMALLER size (e.g., N=100 instead of N=200000) and note it in the description.
+- Keep total response under 4000 tokens. Prefer fewer, well-crafted test cases over many.
+
 The JSON must follow this exact structure:
 {
   "test_cases": [
     {
-      "category": "string - which category this test case belongs to (e.g., small, edge_case, stress, etc.)",
-      "description": "string - brief description of what this test case covers",
-      "input": "string - the exact input that would be fed to stdin, with newlines as \\n"
+      "category": "string",
+      "description": "string",
+      "input": "string - the LITERAL input text with \\n for newlines, NO code"
     }
   ],
   "total_count": number,
-  "generation_notes": "string - any notes about the generation process"
+  "generation_notes": "string"
 }
 
 Rules:
-- Generate between 10-25 test cases covering ALL categories from the schema's test_case_generation_strategy.
+- Generate between 10-15 test cases covering ALL categories from the schema's test_case_generation_strategy.
 - Each test case's input MUST strictly follow the input_structure format from the schema.
 - Respect ALL constraints (min/max values, array lengths, data types).
 - Include at minimum: 
   * 2-3 trivial/small cases (n=1, n=2)
-  * 2-3 edge cases (all same elements, sorted, reverse sorted, etc.)
-  * 2-3 boundary cases (min constraints, max constraints)
+  * 2-3 edge cases (sorted, reverse sorted, etc.)
+  * 2-3 boundary cases (min/max constraints)
   * 3-5 medium random cases
-  * 2-3 large stress test cases (near max constraints)
-- For multi_test_case format, each test case input should include the "t" (number of test cases) line.
+  * 1-2 stress test cases (use moderate sizes like N=50-500 with actual numbers written out)
+- For multi_test_case format, each test case input should include the "t" line.
 - Ensure inputs are valid — no constraint violations, correct separators, correct number of elements.
-- The input string should use actual newline characters (\\n) between lines.
-- Make stress test cases with values near the maximum constraints to catch TLE/MLE issues.`;
+- The input string should use \\n between lines.
+- DO NOT generate test cases with N > 500 since you must write out all numbers literally.`;
+
+function extractJsonFromResponse(response: string): any {
+  let cleaned = response
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  const jsonStart = cleaned.search(/[\{\[]/);
+  const lastBrace = cleaned.lastIndexOf("}");
+  const lastBracket = cleaned.lastIndexOf("]");
+  const jsonEnd = Math.max(lastBrace, lastBracket);
+
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error("No JSON object found in response");
+  }
+
+  cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fix common issues: trailing commas, control chars, truncated arrays
+    cleaned = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x1F\x7F]/g, (c) => c === "\n" || c === "\t" ? c : "");
+
+    // If JSON is truncated, try to close it
+    const openBraces = (cleaned.match(/{/g) || []).length;
+    const closeBraces = (cleaned.match(/}/g) || []).length;
+    const openBrackets = (cleaned.match(/\[/g) || []).length;
+    const closeBrackets = (cleaned.match(/]/g) || []).length;
+
+    // Close unclosed brackets/braces
+    for (let i = 0; i < openBrackets - closeBrackets; i++) cleaned += "]";
+    for (let i = 0; i < openBraces - closeBraces; i++) cleaned += "}";
+
+    // Remove trailing comma before closing
+    cleaned = cleaned.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+
+    return JSON.parse(cleaned);
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -105,18 +154,23 @@ serve(async (req) => {
       });
     }
 
-    let jsonContent = content.trim();
-    if (jsonContent.startsWith("```")) {
-      jsonContent = jsonContent.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-    }
-
+    // Robust JSON extraction
     let parsed;
     try {
-      parsed = JSON.parse(jsonContent);
+      parsed = extractJsonFromResponse(content);
     } catch {
-      return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent }), {
+      return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: content.substring(0, 500) }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Filter out test cases with code expressions in input
+    if (parsed.test_cases) {
+      parsed.test_cases = parsed.test_cases.filter((tc: { input: string }) => {
+        const hasCode = /\b(map|join|range|lambda|for |import |list\()\b/.test(tc.input);
+        return !hasCode && typeof tc.input === "string" && tc.input.length < 50000;
+      });
+      parsed.total_count = parsed.test_cases.length;
     }
 
     // Store test cases in database if runId is provided
