@@ -146,14 +146,81 @@ const Index = () => {
       const result = execData?.results?.[0];
       if (!result) throw new Error("No result returned. Please try again.");
 
-      // Handle runtime errors in buggy code
-      if (result.buggy_status && result.buggy_status !== "OK") {
+      const buggyHasError = result.buggy_status && result.buggy_status !== "OK";
+      const correctHasError = result.correct_status && result.correct_status !== "OK";
+
+      // Both codes crash → likely invalid/malformed input
+      if (buggyHasError && correctHasError) {
+        const buggyMsg = result.buggy_stderr || result.buggy_status;
+        const correctMsg = result.correct_stderr || result.correct_status;
         setDiagnosis({
-          scenario: "syntax_error", verdict: `Runtime error: ${result.buggy_status}`,
-          failing_test: { input: result.input, buggy_output: result.buggy_stderr || result.buggy_output || "No output", correct_output: result.correct_output || "N/A" },
-          issues: [{ type: "runtime", line: null, description: `Your code encountered: ${result.buggy_status}`, fix: "Check for array bounds, division by zero, or stack overflow." }],
-          root_cause: result.buggy_stderr || result.buggy_status, improvements: [],
+          scenario: "syntax_error",
+          verdict: "Invalid input: both your code and the correct code crashed on this input. The input format is likely incorrect.",
+          failing_test: {
+            input: result.input,
+            buggy_output: result.buggy_stderr || result.buggy_output || "No output (crashed)",
+            correct_output: result.correct_stderr || result.correct_output || "No output (crashed)",
+          },
+          issues: [
+            {
+              type: "runtime",
+              line: null,
+              description: `Both codes received "${result.buggy_status}" — this strongly indicates the test input format doesn't match what the programs expect (e.g., wrong number of values, missing lines, or out-of-range data).`,
+              fix: "Check the input format: ensure it matches the problem's expected pattern (number of lines, data types, ranges, delimiters).",
+            },
+            ...(buggyMsg ? [{
+              type: "runtime" as const,
+              line: null,
+              description: `Your code's error: ${buggyMsg}`,
+              fix: "Review the input format against your code's reading logic (scanf/cin/input patterns).",
+            }] : []),
+            ...(correctMsg && correctMsg !== buggyMsg ? [{
+              type: "runtime" as const,
+              line: null,
+              description: `Correct code's error: ${correctMsg}`,
+              fix: "The reference solution also crashed, confirming the input is malformed.",
+            }] : []),
+          ],
+          root_cause: `The input format doesn't match what either program expects. Common causes: wrong number of elements, missing newlines, non-integer data where integers are expected, or values exceeding array bounds. Buggy stderr: "${buggyMsg || 'none'}". Correct stderr: "${correctMsg || 'none'}".`,
+          improvements: [],
         });
+        toast.error("Invalid input — both codes crashed. Check your input format.");
+      } else if (buggyHasError) {
+        // Only buggy code crashes — send to AI for detailed diagnosis
+        toast.info("Runtime error detected — getting AI diagnosis...");
+        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", {
+          body: {
+            buggyCode, correctCode, language: "cpp",
+            syntaxErrors: null,
+            executionResults: {
+              results: [result],
+              summary: {
+                total: 1,
+                passing: 0,
+                failing: 1,
+                first_failing: {
+                  input: result.input,
+                  buggy_output: result.buggy_stderr || result.buggy_output || "No output (crashed)",
+                  correct_output: result.correct_output || "N/A",
+                  buggy_status: result.buggy_status,
+                  buggy_stderr: result.buggy_stderr,
+                },
+              },
+            },
+            runId: null,
+          },
+        });
+        if (diagError || diagData?.error || !diagData?.diagnosis?.scenario) {
+          setDiagnosis({
+            scenario: "syntax_error",
+            verdict: `Runtime error: ${result.buggy_status}`,
+            failing_test: { input: result.input, buggy_output: result.buggy_stderr || result.buggy_output || "No output", correct_output: result.correct_output || "N/A" },
+            issues: [{ type: "runtime", line: null, description: `Your code encountered: ${result.buggy_status}. Stderr: ${result.buggy_stderr || "none"}`, fix: "Check for array out-of-bounds, division by zero, null pointer access, or stack overflow." }],
+            root_cause: result.buggy_stderr || result.buggy_status, improvements: [],
+          });
+        } else {
+          setDiagnosis(diagData.diagnosis);
+        }
         toast.error(`Runtime error: ${result.buggy_status}`);
       } else if (result.is_failing) {
         setDiagnosis({
