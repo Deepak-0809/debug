@@ -272,11 +272,13 @@ export default function HistoryDetail() {
                   </div>
                   <div className="space-y-2">
                     <div>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">
-                        Input
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-muted-foreground uppercase">Input</span>
+                        <CopyButton text={tc.input_data} />
+                      </div>
                       <div className="mt-0.5 p-2 rounded bg-muted/40 border border-border text-xs font-mono">
                         <CollapsibleText text={tc.input_data} className="text-xs font-mono" />
+                      </div>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
