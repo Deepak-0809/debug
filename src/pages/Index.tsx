@@ -11,37 +11,6 @@ import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import { toast } from "sonner";
 
-const DEFAULT_CODE: Record<string, string> = {
-  cpp: `#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-    int n;
-    cin >> n;
-    // Your solution here
-    return 0;
-}`,
-  python: `n = int(input())
-# Your solution here
-`,
-  java: `import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int n = sc.nextInt();
-        // Your solution here
-    }
-}`,
-  javascript: `const readline = require('readline');
-const rl = readline.createInterface({ input: process.stdin });
-
-rl.on('line', (line) => {
-    const n = parseInt(line);
-    // Your solution here
-});`,
-};
-
 const Index = () => {
   const { user, signOut } = useAuth();
   const [buggyCode, setBuggyCode] = useState("");
