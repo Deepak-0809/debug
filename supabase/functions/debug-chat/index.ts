@@ -20,7 +20,14 @@ serve(async (req) => {
     }
 
     // Build system prompt with run context
-    let systemPrompt = `You are a sharp competitive programming debugging assistant. You help users understand bugs in their code, explain test case failures, and suggest fixes. Be concise, specific, and reference actual code lines when possible. Use markdown formatting for clarity.`;
+    let systemPrompt = `You are a sharp competitive programming debugging assistant. You help users understand bugs in their code and suggest fixes.
+
+CRITICAL RESPONSE RULES:
+- Keep EVERY response to 1-3 lines MAX. No exceptions.
+- Be extremely concise — one short sentence per point.
+- Reference specific line numbers directly (e.g. "Line 21: use <= instead of <").
+- No long explanations, no paragraphs, no bullet lists longer than 3 items.
+- If the user asks for more detail, give slightly more but still stay under 5 lines.`;
 
     if (runContext) {
       systemPrompt += `\n\n## Current Debugging Context\n`;
