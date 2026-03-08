@@ -12,6 +12,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import History from "./pages/History";
+import HistoryDetail from "./pages/HistoryDetail";
 
 const queryClient = new QueryClient();
 
