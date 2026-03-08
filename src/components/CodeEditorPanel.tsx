@@ -20,56 +20,16 @@ const languageMap: Record<string, string> = {
 export default function CodeEditorPanel({ label, language, value, onChange }: CodeEditorPanelProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
-
-    // Enable native clipboard (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A)
-    editor.addAction({
-      id: "editor.action.clipboardCopyAction",
-      label: "Copy",
-      keybindings: [2048 | 33], // Ctrl+C
-      run: () => {
-        document.execCommand("copy");
-      },
-    });
-
-    editor.addAction({
-      id: "editor.action.clipboardPasteAction",
-      label: "Paste",
-      keybindings: [2048 | 52], // Ctrl+V
-      run: () => {
-        document.execCommand("paste");
-      },
-    });
-
-    editor.addAction({
-      id: "editor.action.clipboardCutAction",
-      label: "Cut",
-      keybindings: [2048 | 54], // Ctrl+X
-      run: () => {
-        document.execCommand("cut");
-      },
-    });
-
-    editor.addAction({
-      id: "editor.action.selectAllAction",
-      label: "Select All",
-      keybindings: [2048 | 31], // Ctrl+A
-      run: (ed) => {
-        const model = ed.getModel();
-        if (model) {
-          ed.setSelection(model.getFullModelRange());
-        }
-      },
-    });
+  const handleEditorMount = (ed: editor.IStandaloneCodeEditor) => {
+    editorRef.current = ed;
 
     // Focus the editor on click
-    editor.onDidFocusEditorText(() => {
-      editor.updateOptions({ renderLineHighlight: "all" });
+    ed.onDidFocusEditorText(() => {
+      ed.updateOptions({ renderLineHighlight: "all" });
     });
 
-    editor.onDidBlurEditorText(() => {
-      editor.updateOptions({ renderLineHighlight: "none" });
+    ed.onDidBlurEditorText(() => {
+      ed.updateOptions({ renderLineHighlight: "none" });
     });
   };
 
