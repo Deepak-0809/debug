@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Bug, LogOut, History } from "lucide-react";
+import { Bug, LogOut, History, Sun, Moon } from "lucide-react";
 import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import RunSingleTestPanel from "@/components/RunSingleTestPanel";
@@ -20,6 +20,17 @@ const Index = () => {
   const [progressStep, setProgressStep] = useState("");
   const [diagnosis, setDiagnosis] = useState<any>(null);
   const [singleTestLoading, setSingleTestLoading] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem("theme") !== "light";
+  });
+
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem("theme", next ? "dark" : "light");
+      return next;
+    });
+  };
 
   const handleFindFailing = async () => {
     if (!buggyCode.trim()) { toast.error("Please paste your buggy code"); return; }
@@ -169,7 +180,7 @@ const Index = () => {
   };
 
   return (
-    <div className="dark flex h-screen flex-col bg-background">
+    <div className={`${isDark ? "dark" : ""} flex h-screen flex-col bg-background`}>
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between border-b border-border px-3 sm:px-4 py-2">
         <div className="flex items-center gap-2">
@@ -183,6 +194,9 @@ const Index = () => {
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground text-xs h-8" onClick={() => navigate("/history")}>
             <History className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">History</span>
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
+            {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </Button>
           <span className="text-xs text-muted-foreground hidden md:inline truncate max-w-[140px]">{user?.email}</span>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={signOut}>
