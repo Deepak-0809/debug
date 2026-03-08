@@ -38,14 +38,30 @@ export default function ConfigPanel({
         </span>
       </div>
       <div className="flex flex-col flex-1 p-4">
-        <div className="space-y-1.5 flex-1">
-          <Label className="text-foreground text-sm">Problem Details (Optional)</Label>
-          <Textarea
-            placeholder={`• Problem constraints (e.g., 1 ≤ N ≤ 10^5)\n• Problem statement\n• Input/output format`}
-            className="min-h-[100px] h-full font-mono text-xs text-foreground resize-none"
-            value={additionalInfo}
-            onChange={(e) => onAdditionalInfoChange(e.target.value)}
-          />
+        <div className="space-y-3 flex-1">
+          <div className="space-y-1.5">
+            <Label className="text-foreground text-sm">Language</Label>
+            <Select value={language} onValueChange={onLanguageChange}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cpp">C++</SelectItem>
+                <SelectItem value="python">Python</SelectItem>
+                <SelectItem value="java">Java</SelectItem>
+                <SelectItem value="javascript">JavaScript</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <Label className="text-foreground text-sm">Problem Details (Optional)</Label>
+            <Textarea
+              placeholder={`• Problem constraints (e.g., 1 ≤ N ≤ 10^5)\n• Problem statement\n• Input/output format`}
+              className="min-h-[80px] h-full font-mono text-xs text-foreground resize-none"
+              value={additionalInfo}
+              onChange={(e) => onAdditionalInfoChange(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Progress indicator */}
