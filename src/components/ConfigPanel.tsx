@@ -11,17 +11,37 @@ import {
 } from "@/components/ui/select";
 import { Search, Play } from "lucide-react";
 
+const LANGUAGE_CONSTRAINTS: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
+  cpp: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+    { key: "timeLimit", label: "Time limit (seconds)", placeholder: "e.g., 2", type: "number" },
+  ],
+  python: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+  ],
+  java: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "testCasesT", label: "Number of test cases T", placeholder: "e.g., 10", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+    { key: "memoryLimit", label: "Memory limit (MB)", placeholder: "e.g., 256", type: "number" },
+  ],
+  javascript: [
+    { key: "maxN", label: "Max value of N", placeholder: "e.g., 100000", type: "number" },
+    { key: "valueRange", label: "Value range", placeholder: "e.g., 1 to 10^9", type: "text" },
+  ],
+};
+
 interface ConfigPanelProps {
   language: string;
   onLanguageChange: (lang: string) => void;
   sampleInput: string;
   onSampleInputChange: (val: string) => void;
-  maxN: string;
-  onMaxNChange: (val: string) => void;
-  testCasesT: string;
-  onTestCasesTChange: (val: string) => void;
-  valueRange: string;
-  onValueRangeChange: (val: string) => void;
+  constraints: Record<string, string>;
+  onConstraintChange: (key: string, val: string) => void;
   onFindFailing: () => void;
   onRunSingle: () => void;
   loading: boolean;
@@ -32,16 +52,13 @@ export default function ConfigPanel({
   onLanguageChange,
   sampleInput,
   onSampleInputChange,
-  maxN,
-  onMaxNChange,
-  testCasesT,
-  onTestCasesTChange,
-  valueRange,
-  onValueRangeChange,
+  constraints,
+  onConstraintChange,
   onFindFailing,
   onRunSingle,
   loading,
 }: ConfigPanelProps) {
+  const currentConstraints = LANGUAGE_CONSTRAINTS[language] || LANGUAGE_CONSTRAINTS.cpp;
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
@@ -71,7 +88,7 @@ export default function ConfigPanel({
           <Label className="text-foreground text-sm">Sample Input (Optional)</Label>
           <Textarea
             placeholder="Paste a sample input from the problem..."
-            className="min-h-[100px] font-mono text-xs"
+            className="min-h-[100px] font-mono text-xs text-foreground"
             value={sampleInput}
             onChange={(e) => onSampleInputChange(e.target.value)}
           />
@@ -83,32 +100,18 @@ export default function ConfigPanel({
         {/* Constraints */}
         <div className="space-y-3">
           <Label className="text-foreground text-sm font-semibold">Constraints</Label>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs">Max value of N</Label>
-            <Input
-              type="number"
-              placeholder="e.g., 100000"
-              value={maxN}
-              onChange={(e) => onMaxNChange(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs">Number of test cases T</Label>
-            <Input
-              type="number"
-              placeholder="e.g., 10"
-              value={testCasesT}
-              onChange={(e) => onTestCasesTChange(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-muted-foreground text-xs">Value range</Label>
-            <Input
-              placeholder="e.g., 1 to 10^9"
-              value={valueRange}
-              onChange={(e) => onValueRangeChange(e.target.value)}
-            />
-          </div>
+          {currentConstraints.map((c) => (
+            <div key={c.key} className="space-y-2">
+              <Label className="text-muted-foreground text-xs">{c.label}</Label>
+              <Input
+                type={c.type === "number" ? "number" : "text"}
+                placeholder={c.placeholder}
+                className="text-foreground"
+                value={constraints[c.key] || ""}
+                onChange={(e) => onConstraintChange(c.key, e.target.value)}
+              />
+            </div>
+          ))}
         </div>
 
         {/* Action Buttons */}

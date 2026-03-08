@@ -48,10 +48,12 @@ const Index = () => {
   const [buggyCode, setBuggyCode] = useState(DEFAULT_CODE.cpp);
   const [correctCode, setCorrectCode] = useState("");
   const [sampleInput, setSampleInput] = useState("");
-  const [maxN, setMaxN] = useState("");
-  const [testCasesT, setTestCasesT] = useState("");
-  const [valueRange, setValueRange] = useState("");
+  const [constraints, setConstraints] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  const handleConstraintChange = (key: string, val: string) => {
+    setConstraints((prev) => ({ ...prev, [key]: val }));
+  };
 
   const handleLanguageChange = (lang: string) => {
     setLanguage(lang);
@@ -135,12 +137,8 @@ const Index = () => {
               onLanguageChange={handleLanguageChange}
               sampleInput={sampleInput}
               onSampleInputChange={setSampleInput}
-              maxN={maxN}
-              onMaxNChange={setMaxN}
-              testCasesT={testCasesT}
-              onTestCasesTChange={setTestCasesT}
-              valueRange={valueRange}
-              onValueRangeChange={setValueRange}
+              constraints={constraints}
+              onConstraintChange={handleConstraintChange}
               onFindFailing={handleFindFailing}
               onRunSingle={handleRunSingle}
               loading={loading}
