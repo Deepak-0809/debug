@@ -171,7 +171,7 @@ const Index = () => {
         }
 
         setProgressStep(`Step 4/5: Running extra batch ${retryRound}/${MAX_RETRY_ROUNDS} (${extraCount} tests)...`);
-        const { data: extraExecData, error: extraExecError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, testCases: extraTestCases, runId } });
+        const { data: extraExecData, error: extraExecError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: extraTestCases, runId } });
         if (extraExecError || extraExecData?.error) break;
 
         // If this batch found failures, use its results
