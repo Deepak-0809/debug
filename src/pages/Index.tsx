@@ -266,9 +266,38 @@ const Index = () => {
     setDiagnosis(null);
 
     try {
+      // Detect if class-based code (LeetCode style) — needs wrapping before execution
+      const isClassBased = (code: string): boolean => {
+        const hasClass = /class\s+Solution/.test(code);
+        const hasMain = /int\s+main\s*\(|void\s+main\s*\(|public\s+static\s+void\s+main|if\s+__name__\s*==/.test(code);
+        return hasClass && !hasMain;
+      };
+
+      let execBuggy = cleanBuggy;
+      let execCorrect = cleanCorrect;
+
+      if (isClassBased(cleanBuggy) || isClassBased(cleanCorrect)) {
+        toast.info("Class-based code detected — wrapping for execution...");
+        // Need schema for wrapping — do a quick analyze
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", {
+          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo: "" },
+        });
+        if (analysisError) throw new Error(analysisError.message || "Analysis failed");
+        if (analysisData?.error) throw new Error(analysisData.error);
+
+        const schema = analysisData?.schema;
+        const { data: wrapData, error: wrapError } = await supabase.functions.invoke("wrap-class-code", {
+          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLang },
+        });
+        if (wrapError) throw new Error(wrapError.message || "Code wrapping failed");
+        if (wrapData?.error) throw new Error(wrapData.error);
+        if (wrapData?.wrappedBuggyCode) execBuggy = wrapData.wrappedBuggyCode;
+        if (wrapData?.wrappedCorrectCode) execCorrect = wrapData.wrappedCorrectCode;
+      }
+
       const testCases = [{ id: null, input: testInput }];
       toast.info(`Running your test case (${detectedLang})...`);
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLang, testCases, runId: null } });
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null } });
       if (execError) throw new Error(execError.message || "Execution failed");
       if (execData?.error) throw new Error(execData.error);
       if (execData?.retry_branch1) throw new Error(execData.message || "Compilation error. Check your code.");
