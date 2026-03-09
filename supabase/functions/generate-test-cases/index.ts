@@ -198,7 +198,7 @@ serve(async (req) => {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.4,
+          temperature: retryRound === 0 ? 0.4 : 0.7 + (retryRound * 0.1),
           max_tokens: 4000,
         }),
         signal: controller.signal,
