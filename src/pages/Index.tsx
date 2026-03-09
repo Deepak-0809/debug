@@ -125,9 +125,51 @@ const Index = () => {
         if (dbTestCases && dbTestCases.length > 0) storedTestCases = dbTestCases.map((tc) => ({ id: tc.id, input: tc.input_data }));
       }
 
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, testCases: storedTestCases, runId } });
+      let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, testCases: storedTestCases, runId } });
       if (execError) throw new Error(execError.message || "Code execution failed");
       if (execData?.error) throw new Error(execData.error);
+
+      // If no failing test found, retry with 2 more batches of test cases to be thorough
+      const MAX_RETRY_ROUNDS = 2;
+      let retryRound = 0;
+      while (
+        !execData?.compilation_error &&
+        execData?.summary?.failing === 0 &&
+        retryRound < MAX_RETRY_ROUNDS
+      ) {
+        retryRound++;
+        setProgressStep(`Step 4/5: No bug found yet — generating extra test batch ${retryRound}/${MAX_RETRY_ROUNDS}...`);
+        const { data: extraTestData, error: extraTestError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId } });
+        if (extraTestError || extraTestData?.error || !extraTestData?.result?.test_cases?.length) break;
+
+        const extraCount = extraTestData.result.test_cases.length;
+        let extraTestCases = extraTestData.result.test_cases.map((tc: any) => ({ id: tc.id || null, input: tc.input }));
+        if (runId) {
+          const { data: dbExtra } = await supabase.from("test_cases").select("id, input_data").eq("run_id", runId).order("created_at", { ascending: false }).limit(extraCount);
+          if (dbExtra && dbExtra.length > 0) extraTestCases = dbExtra.map((tc) => ({ id: tc.id, input: tc.input_data }));
+        }
+
+        setProgressStep(`Step 4/5: Running extra batch ${retryRound}/${MAX_RETRY_ROUNDS} (${extraCount} tests)...`);
+        const { data: extraExecData, error: extraExecError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, testCases: extraTestCases, runId } });
+        if (extraExecError || extraExecData?.error) break;
+
+        // If this batch found failures, use its results
+        if (extraExecData?.summary?.failing > 0 || extraExecData?.compilation_error) {
+          execData = extraExecData;
+          break;
+        }
+        // Merge summary for final count
+        execData = {
+          ...execData,
+          results: [...(execData.results || []), ...(extraExecData.results || [])],
+          summary: {
+            total: (execData.summary?.total || 0) + (extraExecData.summary?.total || 0),
+            passing: (execData.summary?.passing || 0) + (extraExecData.summary?.passing || 0),
+            failing: 0,
+            first_failing: null,
+          },
+        };
+      }
 
       // Handle compilation errors — send to AI for diagnosis instead of retrying
       if (execData?.compilation_error) {
