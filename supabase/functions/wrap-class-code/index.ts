@@ -108,9 +108,17 @@ Generate the COMPLETE runnable program that includes this class exactly as-is, p
       let content = data.choices?.[0]?.message?.content;
       if (!content) throw new Error(`No AI response for ${label}`);
 
-      // Strip markdown fences if present
+      // Aggressively strip markdown fences and any non-code artifacts
       content = content.trim();
-      content = content.replace(/^```[\w]*\s*\n?/, "").replace(/\n?```\s*$/, "");
+      // Remove all code fence variants (```cpp, ```c++, ```python, ```java, ```\n, etc.)
+      content = content.replace(/^```[\w\+\#]*\s*\n?/gm, "").replace(/\n?```\s*$/gm, "");
+      // Remove any leading/trailing backticks that might remain
+      content = content.replace(/^`+|`+$/g, "");
+      // Remove any "Output:" or "Explanation:" text that AI sometimes appends
+      const outputMarker = content.search(/\n(Output|Explanation|Note|Example|Input):/i);
+      if (outputMarker > 100) {
+        content = content.substring(0, outputMarker);
+      }
 
       return content.trim();
     };
