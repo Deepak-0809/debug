@@ -49,6 +49,7 @@ interface Run {
   syntax_check: any;
   constraints_json: any;
   created_at: string;
+  ai_model_used: string | null;
 }
 
 const statusConfig: Record<
