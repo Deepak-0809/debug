@@ -152,6 +152,7 @@ export default function HistoryDetail() {
             <p className="text-xs text-muted-foreground mt-0.5">
               {format(new Date(run.created_at), "MMMM d, yyyy · h:mm a")}
               {testCases.length > 0 && ` · ${testCases.length} test cases`}
+              {run.ai_model_used && ` · AI: ${run.ai_model_used}`}
             </p>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
