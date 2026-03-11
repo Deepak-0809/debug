@@ -210,11 +210,57 @@ async function callAnthropic(options: AIRequestOptions, apiKey: string): Promise
   });
 }
 
-// Provider chain
+// --- OPENROUTER PROVIDER ---
+function getOpenRouterModel(requestedModel?: string, free = false): string {
+  // For programming tasks, use good coding models
+  const suffix = free ? ":free" : "";
+  if (!requestedModel) return `google/gemini-2.5-flash${suffix}`;
+  if (requestedModel.includes("gemini-2.5-pro") || requestedModel.includes("gpt-5")) return `google/gemini-2.5-pro${suffix}`;
+  if (requestedModel.includes("gemini-2.5-flash")) return `google/gemini-2.5-flash${suffix}`;
+  if (requestedModel.includes("gemini-3-flash")) return `google/gemini-2.5-flash${suffix}`;
+  return `google/gemini-2.5-flash${suffix}`;
+}
+
+async function callOpenRouter(options: AIRequestOptions, apiKey: string, free = false): Promise<Response> {
+  const model = getOpenRouterModel(options.model, free);
+
+  return await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://debugforcompetitiveprogramming.lovable.app",
+      "X-Title": "Debug for CP",
+    },
+    body: JSON.stringify({
+      model,
+      messages: options.messages,
+      temperature: options.temperature ?? 0.3,
+      ...(options.max_tokens ? { max_tokens: options.max_tokens } : {}),
+      ...(options.stream ? { stream: true } : {}),
+      ...(options.response_format ? { response_format: options.response_format } : {}),
+    }),
+  });
+}
+
+// Provider chain: Lovable → Gemini 1 → Gemini 2 → Anthropic → OpenRouter Paid → OpenRouter Free
 const PROVIDERS: ProviderConfig[] = [
   { name: "Lovable", keyEnvVar: "LOVABLE_API_KEY", getModel: getLovableModel, call: callLovable },
   { name: "Google Gemini", keyEnvVar: "GEMINI_API_KEY", getModel: getGeminiModel, call: callGemini },
+  { name: "Google Gemini 2", keyEnvVar: "GEMINI_API_KEY_2", getModel: getGeminiModel, call: callGemini },
   { name: "Anthropic Claude", keyEnvVar: "ANTHROPIC_API_KEY", getModel: getAnthropicModel, call: callAnthropic },
+  { 
+    name: "OpenRouter Paid", 
+    keyEnvVar: "OPENROUTER_API_KEY", 
+    getModel: (m) => getOpenRouterModel(m, false), 
+    call: (opts, key) => callOpenRouter(opts, key, false) 
+  },
+  { 
+    name: "OpenRouter Free", 
+    keyEnvVar: "OPENROUTER_API_KEY", 
+    getModel: (m) => getOpenRouterModel(m, true), 
+    call: (opts, key) => callOpenRouter(opts, key, true) 
+  },
 ];
 
 /**
