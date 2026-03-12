@@ -154,8 +154,8 @@ const Index = () => {
       if (execError) throw new Error(execError.message || "Code execution failed");
       if (execData?.error) throw new Error(execData.error);
 
-      // If no failing test found, retry with 2 more batches of test cases to be thorough
-      const MAX_RETRY_ROUNDS = 2;
+      // If no failing test found, retry with 4 more batches of harder test cases
+      const MAX_RETRY_ROUNDS = 4;
       let retryRound = 0;
       while (
         !execData?.compilation_error &&
