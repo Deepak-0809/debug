@@ -72,11 +72,48 @@ JSON format (REQUIRED):
 }`;
 
   if (retryRound === 0) {
-    return base + `\n\n## RETRY ROUND 0 — Standard Adversarial Coverage\nGenerate 8-10 test cases covering all 8 categories. Each test case should target a specific subtle bug. MUST respect constraints. NO constraint violations.`;
+    return base + `\n\n## RETRY ROUND 0 — Targeted Edge Cases
+Generate 10-12 test cases with this EXACT distribution:
+- 2 edge cases: n=1, n=2, empty input, single element
+- 2 large number cases: values at 10^9, 10^18, 2^31-1, sums that overflow int32/int64
+- 2 identical/duplicate cases: all same values, all zeros, n identical elements
+- 2 special number cases: all 0s, -1, 1, powers of 2, primes, 10^9+7 multiples
+- 2 random structured cases: sorted, reverse sorted, alternating min/max
+MUST respect constraints. NO constraint violations.`;
   } else if (retryRound === 1) {
-    return base + `\n\n## RETRY ROUND 1 — Aggressive Overflow Focus (Previous tests found NO bug)\nGenerate 10-12 adversarial test cases HEAVILY FOCUSED on integer overflow. DO NOT repeat previous test cases.`;
+    return base + `\n\n## RETRY ROUND 1 — Overflow & Zero Focus (Previous tests found NO bug)
+Generate 12 adversarial test cases DIFFERENT from round 0:
+- 3 integer overflow traps: n elements all at 10^9, prefix sums exceeding 2^63, product overflow
+- 3 zero/negative edge cases: all zeros, answer is 0, empty result expected, n=0 if allowed
+- 3 off-by-one traps: answer at index 0, answer at index n-1, k=1, k=n, loop runs n vs n-1
+- 3 boundary extremes: minimum valid input, maximum constraint, transition values
+DO NOT repeat any test case structure from round 0.`;
+  } else if (retryRound === 2) {
+    return base + `\n\n## RETRY ROUND 2 — Duplicate & Pattern Focus (Still no bug after 2 rounds)
+Generate 12-15 adversarial test cases COMPLETELY DIFFERENT from rounds 0-1:
+- 3 all-duplicate cases: every element identical (1s, max value, zeros)
+- 3 two-value cases: only 2 distinct values in various arrangements
+- 3 pattern cases: strictly increasing then one drop, strictly decreasing, plateau then spike
+- 3 mathematical traps: values at 2^31-1, MOD-1, perfect squares, consecutive primes
+Generate NOVEL structures not seen before.`;
+  } else if (retryRound === 3) {
+    return base + `\n\n## RETRY ROUND 3 — Worst Case & Corner Combinations (Still no bug after 3 rounds)
+Generate 15 MAXIMUM adversarial test cases targeting obscure bugs:
+- 3 worst-case performance: maximum N with adversarial ordering (anti-quicksort, anti-mergesort patterns)
+- 3 arithmetic corner cases: INT_MIN, INT_MAX, overflow in intermediate calculations, modular arithmetic edge
+- 3 single-element variations: n=1 with max value, n=1 with 0, n=1 with negative
+- 3 adjacent-difference traps: consecutive elements differing by 1, by max range, alternating +1/-1
+- 3 completely random: truly random values and sizes within constraints
+ALL must be COMPLETELY DIFFERENT from rounds 0-2.`;
   } else {
-    return base + `\n\n## RETRY ROUND ${retryRound} — Maximum Adversarial (Still no bug found)\nGenerate 12-15 MAXIMUM adversarial test cases targeting every known competitive programming pitfall. Generate COMPLETELY DIFFERENT test cases from previous rounds.`;
+    return base + `\n\n## RETRY ROUND ${retryRound} — Desperation Mode (No bug found in ${retryRound} rounds)
+Generate 15 EXTREME adversarial test cases. Think like a problem setter trying to break solutions:
+- Craft inputs where naive vs optimal algorithms diverge
+- Target subtle initialization bugs (uninitialized variables, wrong defaults)
+- Target comparison bugs (<=  vs <, >= vs >)
+- Target data type bugs (int vs long long, float precision)
+- Include adversarial inputs for common algorithm mistakes (greedy vs DP, wrong sorting order)
+EVERY test must be UNIQUE and NOVEL. Maximum creativity required.`;
   }
 }
 
