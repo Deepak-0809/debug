@@ -417,23 +417,26 @@ export async function callAIWithFailover(options: AIRequestOptions): Promise<AIF
         return { response, provider: provider.name, model: modelUsed };
       }
 
-      // Failover on 402 (credits), 429 (rate limit), 403 (quota), 5xx (server error)
-      if ([402, 403, 429].includes(response.status) || response.status >= 500) {
+      // Failover on auth/credits/rate-limit/quota/server errors
+      const failoverStatuses = [401, 402, 403, 429];
+      if (failoverStatuses.includes(response.status) || response.status >= 500) {
         const errText = await response.text();
         errors.push(`${provider.name}: HTTP ${response.status} - ${errText.substring(0, 200)}`);
         console.warn(`[AI Failover] ✗ ${provider.name} returned ${response.status}, trying next...`);
         continue;
       }
 
-      // For 4xx errors (except 402/429), don't failover — it's a client error
+      // For other 4xx errors, also failover for OpenRouter (model-specific issues)
+      // and for any provider returning 400 (bad request can be model-specific)
       const errText = await response.text();
       errors.push(`${provider.name}: HTTP ${response.status} - ${errText.substring(0, 200)}`);
-      // But for OpenRouter, some 400 errors are model-specific — failover
-      if (provider.name.startsWith("OpenRouter") && response.status === 400) {
-        console.warn(`[AI Failover] ✗ ${provider.name} returned 400 (model issue), trying next...`);
+      if (response.status === 400) {
+        console.warn(`[AI Failover] ✗ ${provider.name} returned 400, trying next...`);
         continue;
       }
-      throw new Error(`AI request failed: ${response.status} - ${errText.substring(0, 200)}`);
+      // For other unexpected 4xx, still try next provider rather than throwing
+      console.warn(`[AI Failover] ✗ ${provider.name} returned ${response.status}, trying next...`);
+      continue;
     } catch (e) {
       if (e instanceof Error && e.message.startsWith("AI request failed:")) {
         throw e;
