@@ -56,12 +56,18 @@ function getOpenRouterPaidModel(requestedModel?: string): string {
 }
 
 function getOpenRouterFreeModel(requestedModel?: string): string {
-  // Best free models for competitive programming on OpenRouter
-  // qwen3-coder is top-tier for code; deepseek-r1 for reasoning
   if (!requestedModel) return "qwen/qwen3-coder:free";
   if (requestedModel.includes("gemini-2.5-pro") || requestedModel.includes("gpt-5")) return "deepseek/deepseek-r1-0528:free";
   return "qwen/qwen3-coder:free";
 }
+
+// Backup free models to try if primary free model is rate-limited
+const FREE_MODEL_FALLBACKS = [
+  "qwen/qwen3-coder:free",
+  "deepseek/deepseek-r1-0528:free",
+  "microsoft/mai-ds-r1:free",
+  "google/gemma-3-27b-it:free",
+];
 
 // ─── Helper: Inject JSON instruction into system prompt ──────────
 // For providers/models that don't natively support response_format
