@@ -249,12 +249,16 @@ async function callOpenRouter(options: AIRequestOptions, apiKey: string, modelFn
     messages = injectJsonInstruction(messages, options.response_format);
   }
 
-  // For models with thinking/reasoning (deepseek-r1, qwen3), strip thinking tags from response
+  // Cap max_tokens for OpenRouter to avoid 402 credit errors
+  // Paid models: cap at 8192; Free models: cap at 4096
+  const maxTokensCap = isFreeModel ? 4096 : 8192;
+  const cappedMaxTokens = options.max_tokens ? Math.min(options.max_tokens, maxTokensCap) : maxTokensCap;
+
   const body: Record<string, unknown> = {
     model,
     messages,
     temperature: options.temperature ?? 0.3,
-    ...(options.max_tokens ? { max_tokens: options.max_tokens } : {}),
+    max_tokens: cappedMaxTokens,
     ...(options.stream ? { stream: true } : {}),
     // Only pass response_format for paid models that support it
     ...(!isFreeModel && options.response_format ? { response_format: options.response_format } : {}),
