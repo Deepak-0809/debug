@@ -350,19 +350,7 @@ export default function HistoryDetail() {
             </section>
           )}
 
-        {/* Constraints / Problem Analysis */}
-        {run.constraints_json && (
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Problem Analysis
-            </h2>
-            <div className="rounded-lg border border-border bg-card p-4">
-              <pre className="text-xs font-mono whitespace-pre-wrap text-muted-foreground">
-                {JSON.stringify(run.constraints_json, null, 2)}
-              </pre>
-            </div>
-          </section>
-        )}
+        {/* Problem analysis data is stored in constraints_json but not displayed to users */}
 
         {/* AI Chat History */}
         {chatMessages.length > 0 && (
