@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 function getSystemPrompt(retryRound: number): string {
@@ -83,44 +84,37 @@ MUST respect constraints. NO constraint violations.`;
   } else if (retryRound === 1) {
     return base + `\n\n## RETRY ROUND 1 — Overflow & Zero Focus (Previous tests found NO bug)
 Generate 12 adversarial test cases DIFFERENT from round 0:
-- 3 integer overflow traps: n elements all at 10^9, prefix sums exceeding 2^63, product overflow
-- 3 zero/negative edge cases: all zeros, answer is 0, empty result expected, n=0 if allowed
-- 3 off-by-one traps: answer at index 0, answer at index n-1, k=1, k=n, loop runs n vs n-1
-- 3 boundary extremes: minimum valid input, maximum constraint, transition values
+- 3 integer overflow traps
+- 3 zero/negative edge cases
+- 3 off-by-one traps
+- 3 boundary extremes
 DO NOT repeat any test case structure from round 0.`;
   } else if (retryRound === 2) {
     return base + `\n\n## RETRY ROUND 2 — Duplicate & Pattern Focus (Still no bug after 2 rounds)
 Generate 12-15 adversarial test cases COMPLETELY DIFFERENT from rounds 0-1:
-- 3 all-duplicate cases: every element identical (1s, max value, zeros)
-- 3 two-value cases: only 2 distinct values in various arrangements
-- 3 pattern cases: strictly increasing then one drop, strictly decreasing, plateau then spike
-- 3 mathematical traps: values at 2^31-1, MOD-1, perfect squares, consecutive primes
+- 3 all-duplicate cases
+- 3 two-value cases
+- 3 pattern cases
+- 3 mathematical traps
 Generate NOVEL structures not seen before.`;
   } else if (retryRound === 3) {
     return base + `\n\n## RETRY ROUND 3 — Worst Case & Corner Combinations (Still no bug after 3 rounds)
 Generate 15 MAXIMUM adversarial test cases targeting obscure bugs:
-- 3 worst-case performance: maximum N with adversarial ordering (anti-quicksort, anti-mergesort patterns)
-- 3 arithmetic corner cases: INT_MIN, INT_MAX, overflow in intermediate calculations, modular arithmetic edge
-- 3 single-element variations: n=1 with max value, n=1 with 0, n=1 with negative
-- 3 adjacent-difference traps: consecutive elements differing by 1, by max range, alternating +1/-1
-- 3 completely random: truly random values and sizes within constraints
+- 3 worst-case performance
+- 3 arithmetic corner cases
+- 3 single-element variations
+- 3 adjacent-difference traps
+- 3 completely random
 ALL must be COMPLETELY DIFFERENT from rounds 0-2.`;
   } else {
     return base + `\n\n## RETRY ROUND ${retryRound} — Desperation Mode (No bug found in ${retryRound} rounds)
-Generate 15 EXTREME adversarial test cases. Think like a problem setter trying to break solutions:
-- Craft inputs where naive vs optimal algorithms diverge
-- Target subtle initialization bugs (uninitialized variables, wrong defaults)
-- Target comparison bugs (<=  vs <, >= vs >)
-- Target data type bugs (int vs long long, float precision)
-- Include adversarial inputs for common algorithm mistakes (greedy vs DP, wrong sorting order)
-EVERY test must be UNIQUE and NOVEL. Maximum creativity required.`;
+Generate 15 EXTREME adversarial test cases. Maximum creativity required.`;
   }
 }
 
 function extractJsonFromResponse(response: string): any {
   let cleaned = response.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try { return JSON.parse(cleaned); } catch { /* continue */ }
-
   const testCasesMatch = cleaned.match(/"test_cases"\s*:\s*\[/);
   if (testCasesMatch && testCasesMatch.index !== undefined) {
     const arrayStart = testCasesMatch.index + testCasesMatch[0].length;
@@ -135,7 +129,6 @@ function extractJsonFromResponse(response: string): any {
       return JSON.parse(`{"test_cases":[${completeObjects.join(",")}],"total_count":${completeObjects.length},"generation_notes":"Recovered from truncated response"}`);
     }
   }
-
   const jsonStart = cleaned.search(/[\{\[]/);
   const jsonEnd = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
   if (jsonStart === -1 || jsonEnd === -1) throw new Error("No JSON found");
@@ -159,23 +152,32 @@ function trimSchema(schema: any): any {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const headers = getCorsHeaders(req);
+  if (req.method === "OPTIONS") { return new Response(null, { headers }); }
 
   const auth = await validateAuth(req);
-  if (!auth) {
-    return unauthorizedResponse();
-  }
+  if (!auth) return unauthorizedResponse(req);
+
+  const allowed = await checkRateLimit(auth.userId, "generate-test-cases");
+  if (!allowed) return rateLimitResponse("generate-test-cases");
 
   try {
     const { schema, runId, retryRound = 0 } = await req.json();
 
-    const SYSTEM_PROMPT = getSystemPrompt(retryRound);
+    // Validate retryRound
+    const safeRetryRound = typeof retryRound === "number" ? Math.min(Math.max(0, Math.floor(retryRound)), 10) : 0;
+
+    if (!schema || typeof schema !== "object") {
+      return new Response(JSON.stringify({ error: "Invalid or missing schema" }), {
+        status: 400, headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
+    const SYSTEM_PROMPT = getSystemPrompt(safeRetryRound);
     const trimmedSchema = trimSchema(schema);
-    const roundLabel = retryRound > 0 ? ` (retry round ${retryRound} of 4 — generate COMPLETELY DIFFERENT and HARDER tests than all previous rounds)` : "";
-    const testCount = retryRound <= 1 ? "10-12" : "12-15";
-    const userPrompt = `Generate test cases for this problem${roundLabel}:\n\n${JSON.stringify(trimmedSchema, null, 2)}\n\nGenerate ${testCount} targeted test cases. Each input must be a LITERAL string with \\n for newlines. Keep N ≤ 200.\n\nMUST include:\n- Edge cases (n=1, n=2, empty)\n- Large numbers (10^9, 2^31-1, overflow-prone sums)\n- All-identical values (all 0s, all 1s, all max)\n- Special numbers (0, -1, primes, powers of 2)\n- Random varied inputs${retryRound > 0 ? `\n\nPrevious ${retryRound} round(s) found NO bug — you MUST generate completely novel test structures targeting different bug types.` : ""}`;
+    const roundLabel = safeRetryRound > 0 ? ` (retry round ${safeRetryRound} of 4 — generate COMPLETELY DIFFERENT and HARDER tests than all previous rounds)` : "";
+    const testCount = safeRetryRound <= 1 ? "10-12" : "12-15";
+    const userPrompt = `Generate test cases for this problem${roundLabel}:\n\n${JSON.stringify(trimmedSchema, null, 2)}\n\nGenerate ${testCount} targeted test cases. Each input must be a LITERAL string with \\n for newlines. Keep N ≤ 200.`;
 
     const { response, provider, model } = await callAIWithFailover({
       messages: [
@@ -183,7 +185,7 @@ serve(async (req) => {
         { role: "user", content: userPrompt },
       ],
       model: "google/gemini-2.5-flash",
-      temperature: Math.min(0.4 + (retryRound * 0.15), 1.0),
+      temperature: Math.min(0.4 + (safeRetryRound * 0.15), 1.0),
       max_tokens: 6000,
     });
 
@@ -192,17 +194,15 @@ serve(async (req) => {
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
     let parsed;
-    try {
-      parsed = extractJsonFromResponse(content);
-    } catch {
+    try { parsed = extractJsonFromResponse(content); } catch {
       console.error("Failed to parse AI response:", content.substring(0, 300));
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: content.substring(0, 500) }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
@@ -217,27 +217,24 @@ serve(async (req) => {
 
     if (!parsed.test_cases || parsed.test_cases.length === 0) {
       return new Response(JSON.stringify({ error: "No valid test cases generated. Please try again." }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
     if (runId && parsed.test_cases.length > 0) {
-      const testCaseRows = parsed.test_cases.map((tc: { input: string }) => ({
-        run_id: runId, input_data: tc.input, is_failing: false,
-      }));
+      const testCaseRows = parsed.test_cases.map((tc: { input: string }) => ({ run_id: runId, input_data: tc.input, is_failing: false }));
       const { error: insertError } = await auth.supabase.from("test_cases").insert(testCaseRows);
       if (insertError) console.error("Failed to store test cases:", insertError);
       await auth.supabase.from("runs").update({ status: "tests_generated" }).eq("id", runId);
     }
 
     return new Response(JSON.stringify({ result: parsed, ai_provider: provider, ai_model: model }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-test-cases error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });

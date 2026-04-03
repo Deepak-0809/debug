@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 const SYSTEM_PROMPT = `You are a strict syntax-only checker for competitive programming code. Your ONLY job is to find errors that would prevent the code from COMPILING or that would ALWAYS crash at runtime regardless of input.
@@ -47,19 +49,30 @@ Rules:
 - Line numbers should reference the buggy code.`;
 
 serve(async (req) => {
+  const headers = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   const auth = await validateAuth(req);
-  if (!auth) {
-    return unauthorizedResponse();
-  }
+  if (!auth) return unauthorizedResponse(req);
+
+  const allowed = await checkRateLimit(auth.userId, "check-syntax");
+  if (!allowed) return rateLimitResponse("check-syntax");
 
   try {
-    const { buggyCode, correctCode, language } = await req.json();
+    const body = await req.json();
+    const { buggyCode, correctCode, language } = body;
 
-    let userPrompt = `Check the following ${language || "code"} for syntax and runtime errors:\n\n`;
+    const errors = [
+      validateCode(buggyCode, "buggyCode"),
+      validateCode(correctCode, "correctCode"),
+    ].filter(Boolean);
+    if (errors.length > 0) return validationErrorResponse(errors as any);
+
+    const safeLang = validateLanguage(language);
+
+    let userPrompt = `Check the following ${safeLang} for syntax and runtime errors:\n\n`;
     userPrompt += `## Buggy Code:\n\`\`\`\n${buggyCode}\n\`\`\`\n\n`;
     userPrompt += `## Correct/Reference Code:\n\`\`\`\n${correctCode}\n\`\`\`\n\n`;
     userPrompt += "Analyze for syntax and runtime errors. Produce the JSON now.";
@@ -78,7 +91,7 @@ serve(async (req) => {
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
@@ -92,18 +105,18 @@ serve(async (req) => {
       parsed = JSON.parse(jsonContent);
     } catch {
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
     return new Response(JSON.stringify({ result: parsed, ai_provider: provider, ai_model: model }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("check-syntax error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });
