@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 const SYSTEM_PROMPT = `You are a sharp, no-nonsense competitive programming debugger. You analyze code bugs and give DIRECT, CONCISE answers. No fluff.
@@ -63,14 +65,16 @@ RULES:
 - For all_correct: list ALL code differences you find between buggy and correct code, even minor ones.`;
 
 serve(async (req) => {
+  const headers = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   const auth = await validateAuth(req);
-  if (!auth) {
-    return unauthorizedResponse();
-  }
+  if (!auth) return unauthorizedResponse(req);
+
+  const allowed = await checkRateLimit(auth.userId, "diagnose-bug");
+  if (!allowed) return rateLimitResponse("diagnose-bug");
 
   try {
     const {
@@ -78,7 +82,15 @@ serve(async (req) => {
       syntaxErrors, executionResults, compilationError, runId,
     } = await req.json();
 
-    let userPrompt = `Language: ${language || "cpp"}\n\n`;
+    const errors = [
+      validateCode(buggyCode, "buggyCode"),
+      validateCode(correctCode, "correctCode"),
+    ].filter(Boolean);
+    if (errors.length > 0) return validationErrorResponse(errors as any);
+
+    const safeLang = validateLanguage(language);
+
+    let userPrompt = `Language: ${safeLang}\n\n`;
     userPrompt += `## Buggy Code:\n\`\`\`\n${buggyCode}\n\`\`\`\n\n`;
     userPrompt += `## Correct Code:\n\`\`\`\n${correctCode}\n\`\`\`\n\n`;
 
@@ -124,7 +136,7 @@ serve(async (req) => {
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
@@ -139,12 +151,12 @@ serve(async (req) => {
     } catch {
       console.error("AI returned invalid JSON:", jsonContent.substring(0, 500));
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent.substring(0, 1000) }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
     if (!parsed.scenario) {
-      parsed.scenario = compilationError ? "compilation_error" 
+      parsed.scenario = compilationError ? "compilation_error"
         : syntaxErrors?.has_errors ? "syntax_error"
         : executionResults?.summary?.failing > 0 ? "logic_bug" : "all_correct";
     }
@@ -161,13 +173,13 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ diagnosis: parsed, ai_provider: provider, ai_model: model }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("diagnose-bug error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { validateCode, validateLanguage, validateAdditionalInfo, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programming analyst. Your task is to analyze provided code and/or problem description and produce a comprehensive JSON schema that describes:
@@ -65,28 +67,35 @@ Rules:
 - Be precise about constraints — use exact values from the problem statement when available.`;
 
 serve(async (req) => {
+  const headers = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   const auth = await validateAuth(req);
-  if (!auth) {
-    return unauthorizedResponse();
-  }
+  if (!auth) return unauthorizedResponse(req);
+
+  // Rate limit
+  const allowed = await checkRateLimit(auth.userId, "analyze-problem");
+  if (!allowed) return rateLimitResponse("analyze-problem");
 
   try {
-    const { buggyCode, correctCode, additionalInfo } = await req.json();
+    const body = await req.json();
+    const { buggyCode, correctCode, additionalInfo } = body;
+
+    // Validate inputs
+    const errors = [
+      validateCode(buggyCode, "buggyCode"),
+      validateCode(correctCode, "correctCode"),
+    ].filter(Boolean);
+    if (errors.length > 0) return validationErrorResponse(errors as any);
+
+    const safeAdditionalInfo = validateAdditionalInfo(additionalInfo);
 
     let userPrompt = "Analyze the following and produce the JSON schema:\n\n";
-    if (buggyCode?.trim()) {
-      userPrompt += `## Buggy Code:\n\`\`\`\n${buggyCode}\n\`\`\`\n\n`;
-    }
-    if (correctCode?.trim()) {
-      userPrompt += `## Correct/Reference Code:\n\`\`\`\n${correctCode}\n\`\`\`\n\n`;
-    }
-    if (additionalInfo?.trim()) {
-      userPrompt += `## Additional Info (Problem Statement / Constraints):\n${additionalInfo}\n\n`;
-    }
+    if (buggyCode?.trim()) userPrompt += `## Buggy Code:\n\`\`\`\n${buggyCode}\n\`\`\`\n\n`;
+    if (correctCode?.trim()) userPrompt += `## Correct/Reference Code:\n\`\`\`\n${correctCode}\n\`\`\`\n\n`;
+    if (safeAdditionalInfo?.trim()) userPrompt += `## Additional Info (Problem Statement / Constraints):\n${safeAdditionalInfo}\n\n`;
     userPrompt += "Produce the comprehensive JSON schema now.";
 
     const { response, provider, model } = await callAIWithFailover({
@@ -105,38 +114,24 @@ serve(async (req) => {
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
-    // Robust JSON extraction and repair
     function extractAndRepairJson(response: string): unknown {
-      let cleaned = response
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/g, "")
-        .trim();
-
+      let cleaned = response.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
       const jsonStart = cleaned.search(/[\{\[]/);
       if (jsonStart === -1) throw new Error("No JSON object found in response");
-
       const isArray = cleaned[jsonStart] === '[';
       const jsonEnd = isArray ? cleaned.lastIndexOf(']') : cleaned.lastIndexOf('}');
-
-      if (jsonEnd === -1 || jsonEnd <= jsonStart) {
-        cleaned = cleaned.substring(jsonStart);
-      } else {
-        cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
-      }
-
+      if (jsonEnd === -1 || jsonEnd <= jsonStart) cleaned = cleaned.substring(jsonStart);
+      else cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
       cleaned = cleaned
         .replace(/\(\s*\d+\s*<<\s*\d+\s*\)\s*\+?\s*\d*/g, "0")
         .replace(/\d+\s*\*\*\s*\d+/g, "0")
-        .replace(/,\s*}/g, "}")
-        .replace(/,\s*]/g, "]")
+        .replace(/,\s*}/g, "}").replace(/,\s*]/g, "]")
         .replace(/[\x00-\x1F\x7F]/g, "");
-
       try { return JSON.parse(cleaned); } catch { /* try repair */ }
-
       function balanceAndParse(str: string): unknown {
         let openBraces = 0, openBrackets = 0, lastGoodPos = -1;
         let inString = false, escape = false;
@@ -174,7 +169,6 @@ serve(async (req) => {
         }
         throw new Error("Cannot repair truncated JSON");
       }
-
       return balanceAndParse(cleaned);
     }
 
@@ -184,18 +178,18 @@ serve(async (req) => {
     } catch (parseErr) {
       console.error("JSON extraction failed:", parseErr);
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: content.substring(0, 500) }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });
     }
 
     return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model }), {
-      status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("analyze-problem error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programmer. Your ONLY job is to generate a main() function that:
@@ -35,15 +37,25 @@ FOR JAVA:
 IMPORTANT: The input parsing must match the schema EXACTLY. Read variables in the correct order and on the correct lines.`;
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const headers = getCorsHeaders(req);
+  if (req.method === "OPTIONS") { return new Response(null, { headers }); }
 
   const auth = await validateAuth(req);
-  if (!auth) return unauthorizedResponse();
+  if (!auth) return unauthorizedResponse(req);
+
+  const allowed = await checkRateLimit(auth.userId, "wrap-class-code");
+  if (!allowed) return rateLimitResponse("wrap-class-code");
 
   try {
     const { buggyCode, correctCode, schema, language } = await req.json();
+
+    const errors = [
+      validateCode(buggyCode, "buggyCode"),
+      validateCode(correctCode, "correctCode"),
+    ].filter(Boolean);
+    if (errors.length > 0) return validationErrorResponse(errors as any);
+
+    const safeLang = validateLanguage(language);
 
     const schemaSummary = {
       input_structure: schema?.input_structure,
@@ -59,7 +71,7 @@ serve(async (req) => {
 
     const methodHint = detectMethod(buggyCode) || detectMethod(correctCode) || "";
 
-    const userPrompt = `Language: ${language}
+    const userPrompt = `Language: ${safeLang}
 
 Problem Schema:
 ${JSON.stringify(schemaSummary, null, 2)}
@@ -99,11 +111,11 @@ Output ONLY raw code.`;
     let wrappedBuggy: string;
     let wrappedCorrect: string;
 
-    if (language === "cpp" || language === "c") {
+    if (safeLang === "cpp" || safeLang === "c") {
       const header = `#include <bits/stdc++.h>\nusing namespace std;\n\n`;
       wrappedBuggy = header + buggyCode.trim() + "\n\n" + mainCode;
       wrappedCorrect = header + correctCode.trim() + "\n\n" + mainCode;
-    } else if (language === "java") {
+    } else if (safeLang === "java") {
       wrappedBuggy = buggyCode.trim() + "\n\npublic class Main {\n" + mainCode + "\n}";
       wrappedCorrect = correctCode.trim() + "\n\npublic class Main {\n" + mainCode + "\n}";
     } else {
@@ -112,19 +124,14 @@ Output ONLY raw code.`;
     }
 
     return new Response(
-      JSON.stringify({
-        wrappedBuggyCode: wrappedBuggy,
-        wrappedCorrectCode: wrappedCorrect,
-        ai_provider: provider,
-        ai_model: model,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ wrappedBuggyCode: wrappedBuggy, wrappedCorrectCode: wrappedCorrect, ai_provider: provider, ai_model: model }),
+      { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error("wrap-class-code error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });

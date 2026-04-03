@@ -1,19 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
+import { validateChatMessages, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
 serve(async (req) => {
+  const headers = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   const auth = await validateAuth(req);
-  if (!auth) {
-    return unauthorizedResponse();
-  }
+  if (!auth) return unauthorizedResponse(req);
+
+  const allowed = await checkRateLimit(auth.userId, "debug-chat");
+  if (!allowed) return rateLimitResponse("debug-chat");
 
   try {
     const { messages, runContext } = await req.json();
+
+    // Validate chat messages
+    const msgError = validateChatMessages(messages);
+    if (msgError) return validationErrorResponse([msgError]);
 
     let systemPrompt = `You are a sharp competitive programming debugging assistant. You help users understand bugs in their code and suggest fixes.
 
@@ -27,12 +35,12 @@ CRITICAL RESPONSE RULES:
     if (runContext) {
       systemPrompt += `\n\n## Current Debugging Context\n`;
       if (runContext.language) systemPrompt += `**Language:** ${runContext.language}\n`;
-      if (runContext.buggyCode) systemPrompt += `\n**User's Buggy Code:**\n\`\`\`${runContext.language || "cpp"}\n${runContext.buggyCode}\n\`\`\`\n`;
-      if (runContext.correctCode) systemPrompt += `\n**Correct Reference Code:**\n\`\`\`${runContext.language || "cpp"}\n${runContext.correctCode}\n\`\`\`\n`;
-      if (runContext.diagnosis) systemPrompt += `\n**AI Diagnosis:**\n${JSON.stringify(runContext.diagnosis, null, 2)}\n`;
-      if (runContext.failingInput) systemPrompt += `\n**Failing Input:**\n\`\`\`\n${runContext.failingInput}\n\`\`\`\n`;
-      if (runContext.outputBuggy) systemPrompt += `**Buggy Output:** \`${runContext.outputBuggy}\`\n`;
-      if (runContext.outputCorrect) systemPrompt += `**Correct Output:** \`${runContext.outputCorrect}\`\n`;
+      if (runContext.buggyCode) systemPrompt += `\n**User's Buggy Code:**\n\`\`\`${runContext.language || "cpp"}\n${String(runContext.buggyCode).substring(0, 50000)}\n\`\`\`\n`;
+      if (runContext.correctCode) systemPrompt += `\n**Correct Reference Code:**\n\`\`\`${runContext.language || "cpp"}\n${String(runContext.correctCode).substring(0, 50000)}\n\`\`\`\n`;
+      if (runContext.diagnosis) systemPrompt += `\n**AI Diagnosis:**\n${JSON.stringify(runContext.diagnosis, null, 2).substring(0, 10000)}\n`;
+      if (runContext.failingInput) systemPrompt += `\n**Failing Input:**\n\`\`\`\n${String(runContext.failingInput).substring(0, 10000)}\n\`\`\`\n`;
+      if (runContext.outputBuggy) systemPrompt += `**Buggy Output:** \`${String(runContext.outputBuggy).substring(0, 5000)}\`\n`;
+      if (runContext.outputCorrect) systemPrompt += `**Correct Output:** \`${String(runContext.outputCorrect).substring(0, 5000)}\`\n`;
       systemPrompt += `\nUse this context to answer the user's questions. Reference specific lines, variables, and logic from the code above.`;
     }
 
@@ -45,20 +53,19 @@ CRITICAL RESPONSE RULES:
       stream: true,
     });
 
-    // For streaming, add provider info as a custom header
-    const headers = new Headers({
-      ...corsHeaders,
+    const responseHeaders = new Headers({
+      ...headers,
       "Content-Type": "text/event-stream",
       "X-AI-Provider": provider,
       "X-AI-Model": model,
     });
 
-    return new Response(response.body, { headers });
+    return new Response(response.body, { headers: responseHeaders });
   } catch (e) {
     console.error("debug-chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
     );
   }
 });
