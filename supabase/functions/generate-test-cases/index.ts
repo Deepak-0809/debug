@@ -177,7 +177,7 @@ serve(async (req) => {
     const trimmedSchema = trimSchema(schema);
     const roundLabel = safeRetryRound > 0 ? ` (retry round ${safeRetryRound} of 4 — generate COMPLETELY DIFFERENT and HARDER tests than all previous rounds)` : "";
     const testCount = safeRetryRound <= 1 ? "10-12" : "12-15";
-    const userPrompt = `Generate test cases for this problem${roundLabel}:\n\n${JSON.stringify(trimmedSchema, null, 2)}\n\nGenerate ${testCount} targeted test cases. Each input must be a LITERAL string with \\n for newlines. Keep N ≤ 200.`;
+    const userPrompt = `Generate test cases for this problem${roundLabel}:\n\n${JSON.stringify(trimmedSchema, null, 2)}\n\nGenerate ${testCount} targeted test cases. Each input must be a LITERAL string with \\n for newlines. Keep N ≤ 200.\n\nCRITICAL SIZE LIMITS to avoid truncation:\n- Each "input" string MUST be under 1500 characters total.\n- For array test cases, use AT MOST 30 elements per array (NOT thousands).\n- To stress-test large q/n, use SMALL representative arrays (e.g. q=10 with values like [1, 2, 1000000000]) — NOT q=10000 with 10000 literal values.\n- Output the entire JSON compactly. Do not pad inputs with repeated values.`;
 
     const { response, provider, model } = await callAIWithFailover({
       messages: [
@@ -186,7 +186,7 @@ serve(async (req) => {
       ],
       model: "google/gemini-2.5-flash",
       temperature: Math.min(0.4 + (safeRetryRound * 0.15), 1.0),
-      max_tokens: 6000,
+      max_tokens: 8000,
     });
 
     const data = await response.json();
