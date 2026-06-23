@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Allowed origins — support published app, Lovable previews, and local dev.
 const EXACT_ALLOWED_ORIGINS = new Set([
   "https://debugforcompetitiveprogramming.lovable.app",
+  "https://preview--debugforcompetitiveprogramming.lovable.app",
   "https://id-preview--7d0d176c-48bf-4107-ac98-634944c0e677.lovable.app",
   "http://localhost:5173",
   "http://localhost:8080",
@@ -10,6 +11,7 @@ const EXACT_ALLOWED_ORIGINS = new Set([
 
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https:\/\/[a-z0-9-]+\.lovableproject\.com$/,
+  /^https:\/\/[a-z0-9-]+--debugforcompetitiveprogramming\.lovable\.app$/,
   /^https:\/\/([a-z0-9-]+--)?7d0d176c-48bf-4107-ac98-634944c0e677\.lovable\.app$/,
 ];
 
