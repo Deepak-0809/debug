@@ -2,57 +2,155 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
-import { callAIWithFailover } from "../_shared/ai-failover.ts";
 
-const SYSTEM_PROMPT = `You are a strict syntax-only checker for competitive programming code. Your ONLY job is to find errors that would prevent the code from COMPILING or that would ALWAYS crash at runtime regardless of input.
+// Syntax checking must be deterministic. AI is useful for diagnosis, but it can
+// incorrectly reject valid competitive-programming templates. Judge0 compiles
+// both programs here with empty stdin; input-dependent behavior is checked later.
+const RAPIDAPI_URL = "https://judge0-ce.p.rapidapi.com";
+const FREE_CE_URL = "https://ce.judge0.com";
+const RAPIDAPI_KEY = Deno.env.get("JUDGE0_RAPIDAPI_KEY") || "";
 
-CHECK FOR:
-1. **Syntax Errors**: Missing semicolons, unmatched brackets/braces/parentheses, invalid keywords, typos in language keywords (e.g., "whlie" instead of "while"), undeclared variables used without any declaration, missing #include headers for used functions.
-2. **Guaranteed Runtime Crashes**: Division by a literal zero, accessing a hardcoded negative index, infinite recursion with no base case at all, calling a function that doesn't exist.
+let rapidApiFailedAt: number | null = null;
+const QUOTA_RESET_MS = 60 * 60 * 1000;
 
-DO NOT FLAG (these are logic bugs, NOT syntax/runtime errors):
-- Wrong comparison operators (< vs <=, > vs >=, == vs !=)
-- Off-by-one errors in loop bounds
-- Wrong variable used in an expression
-- Wrong algorithm or approach
-- Different logic than the reference code
-- Wrong formula or calculation
-- Array access with a variable index (even if it MIGHT be out of bounds for some inputs)
-- Wrong sort order or comparator
-- Missing edge case handling
-- Any difference from the correct code that is about LOGIC, not syntax
+const LANGUAGE_MAP: Record<string, number> = {
+  cpp: 54,
+  "c++": 54,
+  c: 50,
+  python: 71,
+  py: 71,
+  python3: 71,
+  java: 62,
+  javascript: 63,
+  js: 63,
+};
 
-IMPORTANT: Do NOT compare the buggy code's logic against the reference code. The reference code is provided ONLY to help you understand the language being used. Logic differences are handled by a separate testing phase.
+type CompilerEndpoint = {
+  url: string;
+  headers: Record<string, string>;
+  label: string;
+};
 
-You MUST respond with ONLY valid JSON — no markdown, no explanation, no code fences.
-
-{
-  "has_errors": true/false,
-  "error_type": "syntax" | "runtime" | "both" | "none",
-  "errors": [
-    {
-      "type": "syntax" | "runtime",
-      "line": number or null,
-      "description": "string describing the error",
-      "severity": "critical" | "warning",
-      "fix_suggestion": "string suggesting the fix"
-    }
-  ],
-  "summary": "string - brief summary",
-  "can_proceed_to_testing": true/false
+function shouldUseRapidApi(): boolean {
+  if (!RAPIDAPI_KEY) return false;
+  if (!rapidApiFailedAt) return true;
+  if (Date.now() - rapidApiFailedAt > QUOTA_RESET_MS) {
+    rapidApiFailedAt = null;
+    return true;
+  }
+  return false;
 }
 
-Rules:
-- Default to has_errors: false. Only set true for REAL syntax/compilation errors or GUARANTEED crashes.
-- If the code would compile and run (even if it produces wrong output), set has_errors to false and can_proceed_to_testing to true.
-- When in doubt, set has_errors to false — let the testing phase catch logic bugs.
-- Line numbers should reference the buggy code.`;
+function getEndpoint(): CompilerEndpoint {
+  if (shouldUseRapidApi()) {
+    return {
+      url: RAPIDAPI_URL,
+      headers: {
+        "Content-Type": "application/json",
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+      },
+      label: "RapidAPI",
+    };
+  }
+
+  return {
+    url: FREE_CE_URL,
+    headers: { "Content-Type": "application/json" },
+    label: "FreeCE",
+  };
+}
+
+function toBase64(value: string): string {
+  return btoa(unescape(encodeURIComponent(value)));
+}
+
+function fromBase64(value: string): string {
+  try {
+    return decodeURIComponent(escape(atob(value)));
+  } catch {
+    return atob(value);
+  }
+}
+
+async function submitCompilationBatch(
+  endpoint: CompilerEndpoint,
+  submissions: { language_id: number; source_code: string }[],
+): Promise<{ tokens: string[]; endpoint: CompilerEndpoint }> {
+  const encoded = submissions.map((submission) => ({
+    language_id: submission.language_id,
+    source_code: toBase64(submission.source_code),
+    stdin: toBase64(""),
+    cpu_time_limit: 5,
+    memory_limit: 256000,
+  }));
+
+  let response = await fetch(`${endpoint.url}/submissions/batch?base64_encoded=true`, {
+    method: "POST",
+    headers: endpoint.headers,
+    body: JSON.stringify({ submissions: encoded }),
+  });
+
+  if (!response.ok && endpoint.label === "RapidAPI" && (response.status === 403 || response.status === 429)) {
+    rapidApiFailedAt = Date.now();
+    endpoint = getEndpoint();
+    response = await fetch(`${endpoint.url}/submissions/batch?base64_encoded=true`, {
+      method: "POST",
+      headers: endpoint.headers,
+      body: JSON.stringify({ submissions: encoded }),
+    });
+  }
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(`Compiler submission failed [${response.status}]: ${details}`);
+  }
+
+  const data = await response.json();
+  return { tokens: (data as { token: string }[]).map((item) => item.token), endpoint };
+}
+
+async function pollCompilationResults(endpoint: CompilerEndpoint, tokens: string[]) {
+  const pollHeaders = { ...endpoint.headers };
+  delete pollHeaders["Content-Type"];
+
+  for (let attempt = 0; attempt < 30; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const response = await fetch(
+      `${endpoint.url}/submissions/batch?tokens=${tokens.join(",")}&base64_encoded=true&fields=token,stderr,status,compile_output`,
+      { method: "GET", headers: pollHeaders },
+    );
+
+    if (response.status === 429 || response.status >= 500) {
+      await response.text();
+      continue;
+    }
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(`Compiler poll failed [${response.status}]: ${details}`);
+    }
+
+    const data = await response.json();
+    const submissions = (data.submissions || data) as Array<Record<string, any>>;
+    if (submissions.every((submission) => submission.status?.id >= 3)) {
+      return submissions.map((submission) => ({
+        status: submission.status,
+        stderr: submission.stderr ? fromBase64(submission.stderr) : "",
+        compile_output: submission.compile_output ? fromBase64(submission.compile_output) : "",
+      }));
+    }
+  }
+
+  throw new Error("Compiler check timed out");
+}
+
+function getCompilerMessage(result: { compile_output?: string; stderr?: string; status?: { description?: string } }): string {
+  return result.compile_output?.trim() || result.stderr?.trim() || result.status?.description || "Compilation failed.";
+}
 
 serve(async (req) => {
   const headers = getCorsHeaders(req);
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers });
 
   const auth = await validateAuth(req);
   if (!auth) return unauthorizedResponse(req);
@@ -63,60 +161,56 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { buggyCode, correctCode, language } = body;
-
     const errors = [
       validateCode(buggyCode, "buggyCode"),
       validateCode(correctCode, "correctCode"),
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
 
-    const safeLang = validateLanguage(language);
+    const safeLanguage = validateLanguage(language);
+    const languageId = LANGUAGE_MAP[safeLanguage] || LANGUAGE_MAP.cpp;
+    const endpoint = getEndpoint();
+    const { tokens, endpoint: submissionEndpoint } = await submitCompilationBatch(endpoint, [
+      { language_id: languageId, source_code: buggyCode },
+      { language_id: languageId, source_code: correctCode },
+    ]);
+    const results = await pollCompilationResults(submissionEndpoint, tokens);
 
-    let userPrompt = `Check the following ${safeLang} for syntax and runtime errors:\n\n`;
-    userPrompt += `## Buggy Code:\n\`\`\`\n${buggyCode}\n\`\`\`\n\n`;
-    userPrompt += `## Correct/Reference Code:\n\`\`\`\n${correctCode}\n\`\`\`\n\n`;
-    userPrompt += "Analyze for syntax and runtime errors. Produce the JSON now.";
-
-    const { response, provider, model } = await callAIWithFailover({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      model: "google/gemini-2.5-flash",
-      temperature: 0.2,
+    const compilerErrors = results.flatMap((result, index) => {
+      if (result.status?.id !== 6) return [];
+      const label = index === 0 ? "Buggy code" : "Correct code";
+      return [{
+        type: "syntax",
+        line: null,
+        description: `${label}: ${getCompilerMessage(result)}`,
+        severity: "critical",
+        fix_suggestion: "Use the compiler message to correct the reported syntax or type error.",
+      }];
     });
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const result = {
+      has_errors: compilerErrors.length > 0,
+      error_type: compilerErrors.length > 0 ? "syntax" : "none",
+      errors: compilerErrors,
+      summary: compilerErrors.length > 0
+        ? "The compiler found an error. Input-dependent runtime behavior is checked in the execution step."
+        : "Both programs compiled successfully. Input-dependent behavior will be checked with test cases.",
+      can_proceed_to_testing: compilerErrors.length === 0,
+      compiler_checked: true,
+      checked_without_input: true,
+    };
 
-    if (!content) {
-      return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...headers, "Content-Type": "application/json" },
-      });
-    }
-
-    let jsonContent = content.trim();
-    if (jsonContent.startsWith("```")) {
-      jsonContent = jsonContent.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
-    }
-
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonContent);
-    } catch {
-      return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent }), {
-        status: 422, headers: { ...headers, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ result: parsed, ai_provider: provider, ai_model: model }), {
-      status: 200, headers: { ...headers, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ result, compiler: submissionEndpoint.label }), {
+      status: 200,
+      headers: { ...headers, "Content-Type": "application/json" },
     });
-  } catch (e) {
-    console.error("check-syntax error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } }
-    );
+  } catch (error) {
+    console.error("check-syntax error:", error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : "Compiler check failed",
+    }), {
+      status: 500,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
   }
 });
