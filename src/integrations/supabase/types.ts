@@ -49,6 +49,27 @@ export type Database = {
           },
         ]
       }
+      payment_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          payload_hash: string
+          processed_at: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          payload_hash: string
+          processed_at?: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          payload_hash?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auth_provider: string | null
@@ -106,6 +127,33 @@ export type Database = {
         }
         Relationships: []
       }
+      run_usage_events: {
+        Row: {
+          action_key: string
+          action_type: string
+          created_at: string
+          id: string
+          plan_at_use: string
+          user_id: string
+        }
+        Insert: {
+          action_key: string
+          action_type: string
+          created_at?: string
+          id?: string
+          plan_at_use: string
+          user_id: string
+        }
+        Update: {
+          action_key?: string
+          action_type?: string
+          created_at?: string
+          id?: string
+          plan_at_use?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       runs: {
         Row: {
           ai_diagnosis: Json | null
@@ -160,6 +208,90 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_state_changes: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          id: string
+          new_plan: string | null
+          new_status: string | null
+          previous_plan: string | null
+          previous_status: string | null
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          new_plan?: string | null
+          new_status?: string | null
+          previous_plan?: string | null
+          previous_status?: string | null
+          source: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          new_plan?: string | null
+          new_status?: string | null
+          previous_plan?: string | null
+          previous_status?: string | null
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          cycle_end: string | null
+          cycle_start: string | null
+          grace_period_end: string | null
+          pending_plan: string | null
+          plan: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          run_limit: number
+          runs_used: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_end?: string | null
+          cycle_start?: string | null
+          grace_period_end?: string | null
+          pending_plan?: string | null
+          plan?: string
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
+          run_limit?: number
+          runs_used?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_end?: string | null
+          cycle_start?: string | null
+          grace_period_end?: string | null
+          pending_plan?: string | null
+          plan?: string
+          razorpay_customer_id?: string | null
+          razorpay_subscription_id?: string | null
+          run_limit?: number
+          runs_used?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       test_cases: {
         Row: {
           created_at: string
@@ -203,6 +335,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_subscription_state: {
+        Args: {
+          _cycle_end: string
+          _cycle_start: string
+          _event_id?: string
+          _grace_period_end: string
+          _plan: string
+          _razorpay_customer_id: string
+          _razorpay_subscription_id: string
+          _reset_runs: boolean
+          _run_limit: number
+          _source: string
+          _status: string
+          _user_id: string
+        }
+        Returns: {
+          created_at: string
+          cycle_end: string | null
+          cycle_start: string | null
+          grace_period_end: string | null
+          pending_plan: string | null
+          plan: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          run_limit: number
+          runs_used: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_rate_limit: {
         Args: {
           _endpoint: string
@@ -214,6 +383,62 @@ export type Database = {
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_runs: { Args: never; Returns: undefined }
+      consume_run_quota: {
+        Args: { _action_key: string; _action_type: string; _user_id: string }
+        Returns: Json
+      }
+      initialize_subscription: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          cycle_end: string | null
+          cycle_start: string | null
+          grace_period_end: string | null
+          pending_plan: string | null
+          plan: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          run_limit: number
+          runs_used: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_subscription_pending: {
+        Args: { _plan: string; _subscription_id: string; _user_id: string }
+        Returns: {
+          created_at: string
+          cycle_end: string | null
+          cycle_start: string | null
+          grace_period_end: string | null
+          pending_plan: string | null
+          plan: string
+          razorpay_customer_id: string | null
+          razorpay_subscription_id: string | null
+          run_limit: number
+          runs_used: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      verify_run_action: {
+        Args: { _action_key: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
