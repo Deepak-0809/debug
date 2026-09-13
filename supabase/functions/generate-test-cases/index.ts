@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 function getSystemPrompt(retryRound: number): string {
   const base = `You are an expert competitive programming stress tester. Your job is NOT to generate random test cases — your job is to BREAK code and expose bugs.
@@ -201,7 +202,8 @@ serve(async (req) => {
   if (!allowed) return rateLimitResponse("generate-test-cases");
 
   try {
-    const { schema, runId, retryRound = 0 } = await req.json();
+    const { schema, runId, retryRound = 0, actionKey } = await req.json();
+    if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
 
     // Validate retryRound
     const safeRetryRound = typeof retryRound === "number" ? Math.min(Math.max(0, Math.floor(retryRound)), 10) : 0;

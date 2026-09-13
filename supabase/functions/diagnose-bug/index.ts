@@ -3,6 +3,7 @@ import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/a
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 const SYSTEM_PROMPT = `You are a sharp, no-nonsense competitive programming debugger. You analyze code bugs and give DIRECT, CONCISE answers. No fluff.
 
@@ -79,7 +80,7 @@ serve(async (req) => {
   try {
     const {
       buggyCode, correctCode, language,
-      syntaxErrors, executionResults, compilationError, runId,
+      syntaxErrors, executionResults, compilationError, runId, actionKey,
     } = await req.json();
 
     const errors = [
@@ -87,6 +88,7 @@ serve(async (req) => {
       validateCode(correctCode, "correctCode"),
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
+    if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
 
     const safeLang = validateLanguage(language);
 
