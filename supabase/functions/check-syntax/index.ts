@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
+import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 // Syntax checking must be deterministic. AI is useful for diagnosis, but it can
 // incorrectly reject valid competitive-programming templates. Judge0 compiles
@@ -160,12 +161,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { buggyCode, correctCode, language } = body;
+    const { buggyCode, correctCode, language, actionKey } = body;
     const errors = [
       validateCode(buggyCode, "buggyCode"),
       validateCode(correctCode, "correctCode"),
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
+    if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
 
     const safeLanguage = validateLanguage(language);
     const languageId = LANGUAGE_MAP[safeLanguage] || LANGUAGE_MAP.cpp;

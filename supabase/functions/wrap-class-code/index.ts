@@ -3,6 +3,7 @@ import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/a
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programmer. Your ONLY job is to generate a main() function that:
 1. Reads input from stdin according to the given schema
@@ -47,13 +48,14 @@ serve(async (req) => {
   if (!allowed) return rateLimitResponse("wrap-class-code");
 
   try {
-    const { buggyCode, correctCode, schema, language } = await req.json();
+    const { buggyCode, correctCode, schema, language, actionKey } = await req.json();
 
     const errors = [
       validateCode(buggyCode, "buggyCode"),
       validateCode(correctCode, "correctCode"),
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
+    if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
 
     const safeLang = validateLanguage(language);
 

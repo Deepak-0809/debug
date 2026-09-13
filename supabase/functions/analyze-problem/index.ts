@@ -3,6 +3,7 @@ import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/a
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validateAdditionalInfo, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { consumeQuota, quotaResponse } from "../_shared/quota.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programming analyst. Your task is to analyze provided code and/or problem description and produce a comprehensive JSON schema that describes:
 
@@ -81,7 +82,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { buggyCode, correctCode, additionalInfo } = body;
+    const { buggyCode, correctCode, additionalInfo, actionKey, actionType = "full_pipeline" } = body;
 
     // Validate inputs
     const errors = [
@@ -89,6 +90,9 @@ serve(async (req) => {
       validateCode(correctCode, "correctCode"),
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
+
+    const quota = await consumeQuota(auth.userId, actionKey, actionType === "single_test" ? "single_test" : "full_pipeline");
+    if (!quota.ok) return quotaResponse(req, quota);
 
     const safeAdditionalInfo = validateAdditionalInfo(additionalInfo);
 
@@ -182,7 +186,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model }), {
+    return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model, usage: quota.usage }), {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {

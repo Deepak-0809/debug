@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validateTestCases, validationErrorResponse } from "../_shared/validation.ts";
+import { consumeQuota, quotaResponse, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 // Primary: RapidAPI (100 free/day, faster)
 // Fallback: Public CE (unlimited, may rate-limit)
@@ -102,7 +103,7 @@ serve(async (req) => {
   if (!allowed) return rateLimitResponse("execute-code");
 
   try {
-    const { buggyCode, correctCode, language, testCases, runId } = await req.json();
+    const { buggyCode, correctCode, language, testCases, runId, actionKey, actionType = "single_test" } = await req.json();
 
     // Validate inputs
     const validationErrors = [
@@ -111,6 +112,13 @@ serve(async (req) => {
       validateTestCases(testCases),
     ].filter(Boolean);
     if (validationErrors.length > 0) return validationErrorResponse(validationErrors as any);
+
+    if (actionType === "single_test") {
+      const quota = await consumeQuota(auth.userId, actionKey, "single_test");
+      if (!quota.ok) return quotaResponse(req, quota);
+    } else if (!(await verifyQuotaAction(auth.userId, actionKey))) {
+      return unmeteredResponse(req);
+    }
 
     const safeLang = validateLanguage(language);
     const langId = LANGUAGE_MAP[safeLang] || LANGUAGE_MAP["cpp"];
