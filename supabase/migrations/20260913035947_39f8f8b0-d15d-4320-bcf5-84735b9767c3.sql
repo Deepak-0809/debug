@@ -1,0 +1,2 @@
+CREATE POLICY "Service role manages payment webhook events" ON public.payment_webhook_events FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service role manages subscription state changes" ON public.subscription_state_changes FOR ALL TO service_role USING (true) WITH CHECK (true);
