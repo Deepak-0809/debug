@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Bug, LogOut, History, Sun, Moon } from "lucide-react";
+import { Bug, CreditCard, History, LogOut, Moon, Sun } from "lucide-react";
 import CodeEditorPanel from "@/components/CodeEditorPanel";
 import ConfigPanel from "@/components/ConfigPanel";
 import RunSingleTestPanel from "@/components/RunSingleTestPanel";
@@ -10,6 +10,8 @@ import DiagnosisDisplay from "@/components/DiagnosisDisplay";
 import AIChatPanel from "@/components/AIChatPanel";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { SubscriptionStatus } from "@/components/SubscriptionStatus";
+import { useSubscription } from "@/hooks/useSubscription";
 
 // Strip markdown code fences and trailing non-code content from pasted code
 const sanitizeCode = (code: string): string => {
@@ -27,6 +29,7 @@ const sanitizeCode = (code: string): string => {
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
+  const { subscription, remaining, refresh: refreshSubscription } = useSubscription();
   const [buggyCode, setBuggyCode] = useState("");
   const [correctCode, setCorrectCode] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
@@ -54,20 +57,26 @@ const Index = () => {
   };
 
   const handleFindFailing = async () => {
+    if (!user) { toast.error("Please log in again."); return; }
     if (!buggyCode.trim()) { toast.error("Please paste your buggy code"); return; }
     if (!correctCode.trim()) { toast.error("Please paste the correct reference code"); return; }
 
     const cleanBuggy = sanitizeCode(buggyCode);
     const cleanCorrect = sanitizeCode(correctCode);
+    const actionKey = crypto.randomUUID();
 
     setLoading(true);
     setDiagnosis(null);
 
     try {
       setProgressStep("Step 1/5: Analyzing problem structure...");
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo } });
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo, actionKey, actionType: "full_pipeline" } });
       if (analysisError) throw new Error(analysisError.message || "Analysis failed");
-      if (analysisData?.error) throw new Error(analysisData.error);
+      if (analysisData?.error) {
+        if (analysisData.code === "RUN_LIMIT_REACHED") navigate("/pricing");
+        throw new Error(analysisData.error);
+      }
+      await refreshSubscription();
       if (!analysisData?.schema) throw new Error("No analysis result");
 
       const schema = analysisData.schema;
@@ -82,7 +91,7 @@ const Index = () => {
         setProgressStep("Step 1.5/5: Wrapping class-based code for execution...");
         toast.info("Class-based code detected — generating executable wrappers...");
         const { data: wrapData, error: wrapError } = await supabase.functions.invoke("wrap-class-code", {
-          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLanguage },
+          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLanguage, actionKey },
         });
         if (wrapError) throw new Error(wrapError.message || "Code wrapping failed");
         if (wrapData?.error) throw new Error(wrapData.error);
@@ -97,7 +106,7 @@ const Index = () => {
       const aiModelUsed = analysisData?.ai_model || null;
 
       const { data: runData, error: insertError } = await supabase.from("runs").insert({
-        user_id: user!.id, buggy_code: cleanBuggy, correct_code: cleanCorrect, language: detectedLanguage,
+        user_id: user.id, buggy_code: cleanBuggy, correct_code: cleanCorrect, language: detectedLanguage,
         constraints_json: schema, status: "analyzed", sample_input: additionalInfo || null,
         ai_model_used: aiModelUsed,
       }).select("id").single();
@@ -106,7 +115,7 @@ const Index = () => {
       if (runId) setCurrentRunId(runId);
 
       setProgressStep("Step 2/5: Checking for syntax & runtime errors...");
-      const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage } });
+      const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, actionKey } });
       if (syntaxError) throw new Error(syntaxError.message || "Syntax check failed");
       if (syntaxData?.error) throw new Error(syntaxData.error);
       const syntaxResult = syntaxData?.result;
@@ -121,7 +130,7 @@ const Index = () => {
       if (syntaxResult?.has_errors) {
         toast.warning(`Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s).`);
         setProgressStep("Step 5/5: AI diagnosing syntax errors...");
-        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId } });
+        const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId, actionKey } });
         if (diagError) throw new Error(diagError.message || "Diagnosis failed");
         if (diagData?.error) throw new Error(diagData.error);
         if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
@@ -135,7 +144,7 @@ const Index = () => {
       }
 
       setProgressStep("Step 3/5: Generating test cases...");
-      const { data: testData, error: testError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId } });
+      const { data: testData, error: testError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, actionKey } });
       if (testError) throw new Error(testError.message || "Test case generation failed");
       if (testData?.error) throw new Error(testData.error);
       const testResult = testData?.result;
@@ -150,7 +159,7 @@ const Index = () => {
       }
 
       // Use wrapped code for execution (same as original for non-class-based)
-      let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: storedTestCases, runId } });
+      let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: storedTestCases, runId, actionKey, actionType: "full_pipeline" } });
       if (execError) throw new Error(execError.message || "Code execution failed");
       if (execData?.error) throw new Error(execData.error);
 
@@ -164,7 +173,7 @@ const Index = () => {
       ) {
         retryRound++;
         setProgressStep(`Step 4/5: No bug found yet — generating harder test batch ${retryRound}/${MAX_RETRY_ROUNDS}...`);
-        const { data: extraTestData, error: extraTestError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, retryRound } });
+        const { data: extraTestData, error: extraTestError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, retryRound, actionKey } });
         if (extraTestError || extraTestData?.error || !extraTestData?.result?.test_cases?.length) break;
 
         const extraCount = extraTestData.result.test_cases.length;
@@ -175,7 +184,7 @@ const Index = () => {
         }
 
         setProgressStep(`Step 4/5: Running extra batch ${retryRound}/${MAX_RETRY_ROUNDS} (${extraCount} tests)...`);
-        const { data: extraExecData, error: extraExecError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: extraTestCases, runId } });
+        const { data: extraExecData, error: extraExecError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: extraTestCases, runId, actionKey, actionType: "full_pipeline" } });
         if (extraExecError || extraExecData?.error) break;
 
         // If this batch found failures, use its results
@@ -203,7 +212,7 @@ const Index = () => {
         const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", {
           body: {
             buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage,
-            syntaxErrors: null, executionResults: execData, compilationError: execData.message, runId,
+            syntaxErrors: null, executionResults: execData, compilationError: execData.message, runId, actionKey,
           },
         });
         if (diagError) throw new Error(diagError.message || "Diagnosis failed");
@@ -226,7 +235,7 @@ const Index = () => {
       }
 
       setProgressStep("Step 5/5: AI diagnosing...");
-      const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: null, executionResults: execData, runId } });
+      const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: null, executionResults: execData, runId, actionKey } });
       if (diagError) throw new Error(diagError.message || "Diagnosis failed");
       if (diagData?.error) throw new Error(diagData.error);
       if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
@@ -249,12 +258,14 @@ const Index = () => {
   };
 
   const handleRunSingle = async (testInput: string) => {
+    if (!user) { toast.error("Please log in again."); return; }
     if (!buggyCode.trim()) { toast.error("Please paste your buggy code"); return; }
     if (!correctCode.trim()) { toast.error("Please paste the correct reference code"); return; }
     if (!testInput.trim()) { toast.error("Please enter test input"); return; }
 
     const cleanBuggy = sanitizeCode(buggyCode);
     const cleanCorrect = sanitizeCode(correctCode);
+    const actionKey = crypto.randomUUID();
 
     // Detect language from code syntax
     const detectLanguage = (code: string): string => {
@@ -284,14 +295,14 @@ const Index = () => {
         toast.info("Class-based code detected — wrapping for execution...");
         // Need schema for wrapping — do a quick analyze
         const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", {
-          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo: "" },
+          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo: "", actionKey, actionType: "single_test" },
         });
         if (analysisError) throw new Error(analysisError.message || "Analysis failed");
         if (analysisData?.error) throw new Error(analysisData.error);
 
         const schema = analysisData?.schema;
         const { data: wrapData, error: wrapError } = await supabase.functions.invoke("wrap-class-code", {
-          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLang },
+          body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLang, actionKey },
         });
         if (wrapError) throw new Error(wrapError.message || "Code wrapping failed");
         if (wrapData?.error) throw new Error(wrapData.error);
@@ -301,9 +312,13 @@ const Index = () => {
 
       const testCases = [{ id: null, input: testInput }];
       toast.info(`Running your test case (${detectedLang})...`);
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null } });
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null, actionKey, actionType: "single_test" } });
       if (execError) throw new Error(execError.message || "Execution failed");
-      if (execData?.error) throw new Error(execData.error);
+      if (execData?.error) {
+        if (execData.code === "RUN_LIMIT_REACHED") navigate("/pricing");
+        throw new Error(execData.error);
+      }
+      await refreshSubscription();
       if (execData?.retry_branch1) throw new Error(execData.message || "Compilation error. Check your code.");
       const result = execData?.results?.[0];
       if (!result) throw new Error("No result returned. Please try again.");
@@ -369,7 +384,7 @@ const Index = () => {
                 },
               },
             },
-            runId: null,
+            runId: null, actionKey,
           },
         });
         if (diagError || diagData?.error || !diagData?.diagnosis?.scenario) {
@@ -427,6 +442,10 @@ const Index = () => {
             <History className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">History</span>
           </Button>
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground text-xs h-8" onClick={() => navigate("/billing")}>
+            <CreditCard className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Billing</span>
+          </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </Button>
@@ -436,6 +455,8 @@ const Index = () => {
           </Button>
         </div>
       </header>
+
+      <SubscriptionStatus subscription={subscription} remaining={remaining} onPricing={() => navigate("/pricing")} onBilling={() => navigate("/billing")} />
 
       {/* Scrollable main area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -458,10 +479,12 @@ const Index = () => {
               onFindFailing={handleFindFailing}
               loading={loading}
               progressStep={progressStep}
+              quotaLabel={remaining === null || !subscription ? undefined : `${remaining} of ${subscription.run_limit} runs remaining`}
+              limitReached={remaining === 0}
             />
           </div>
           <div>
-            <RunSingleTestPanel onRunSingle={handleRunSingle} loading={singleTestLoading} />
+            <RunSingleTestPanel onRunSingle={handleRunSingle} loading={singleTestLoading} quotaLabel={remaining === null || !subscription ? undefined : `${remaining} of ${subscription.run_limit} runs remaining`} limitReached={remaining === 0} />
           </div>
         </div>
 

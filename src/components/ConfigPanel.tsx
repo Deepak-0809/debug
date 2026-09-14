@@ -10,6 +10,8 @@ interface ConfigPanelProps {
   onFindFailing: () => void;
   loading: boolean;
   progressStep?: string;
+  quotaLabel?: string;
+  limitReached?: boolean;
 }
 
 export default function ConfigPanel({
@@ -18,6 +20,8 @@ export default function ConfigPanel({
   onFindFailing,
   loading,
   progressStep,
+  quotaLabel,
+  limitReached = false,
 }: ConfigPanelProps) {
   return (
     <div className="flex flex-col h-full">
@@ -58,12 +62,12 @@ export default function ConfigPanel({
           </div>
         )}
 
-        <Button className="w-full gap-2 mt-3 shrink-0" onClick={onFindFailing} disabled={loading}>
+        <Button className="w-full gap-2 mt-3 shrink-0" onClick={onFindFailing} disabled={loading || limitReached}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
           {loading ? "Processing..." : "Find Failing Test Case"}
         </Button>
         <p className="text-[11px] text-muted-foreground mt-1.5">
-          AI auto-detects language and input format
+          {limitReached ? "Upgrade to start another debug run" : quotaLabel || "AI auto-detects language and input format"}
         </p>
       </div>
     </div>

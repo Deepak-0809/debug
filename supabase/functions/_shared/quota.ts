@@ -56,7 +56,7 @@ export function quotaResponse(req: Request, result: { reason: string | null; usa
     code: invalid ? "INVALID_ACTION_KEY" : "RUN_LIMIT_REACHED",
     usage: result.usage || null,
   }), {
-    status: invalid ? 400 : 403,
+    status: invalid ? 400 : 200,
     headers: { ...headers, "Content-Type": "application/json" },
   });
 }

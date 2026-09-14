@@ -7,9 +7,11 @@ import { Loader2, FlaskConical } from "lucide-react";
 interface RunSingleTestPanelProps {
   onRunSingle: (testInput: string) => void;
   loading: boolean;
+  quotaLabel?: string;
+  limitReached?: boolean;
 }
 
-export default function RunSingleTestPanel({ onRunSingle, loading }: RunSingleTestPanelProps) {
+export default function RunSingleTestPanel({ onRunSingle, loading, quotaLabel, limitReached = false }: RunSingleTestPanelProps) {
   const [testInput, setTestInput] = useState("");
 
   return (
@@ -33,13 +35,13 @@ export default function RunSingleTestPanel({ onRunSingle, loading }: RunSingleTe
           className="w-full gap-2 mt-3 shrink-0"
           variant="secondary"
           onClick={() => onRunSingle(testInput)}
-          disabled={loading}
+          disabled={loading || limitReached}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
           {loading ? "Running..." : "Run Test"}
         </Button>
         <p className="text-[11px] text-muted-foreground mt-1.5">
-          Runs both codes with your input and compares outputs
+          {limitReached ? "Upgrade to run another test" : quotaLabel || "Runs both codes with your input and compares outputs"}
         </p>
       </div>
     </div>
