@@ -3,7 +3,7 @@ import { Check, Loader2 } from "lucide-react";
 import { BillingHeader } from "@/components/BillingHeader";
 import { Button } from "@/components/ui/button";
 import { useSubscription, type PlanName } from "@/hooks/useSubscription";
-import { openSubscriptionCheckout } from "@/lib/billing";
+import { callBilling, openSubscriptionCheckout } from "@/lib/billing";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +17,12 @@ export default function Pricing() {
     if (plan === "free") return;
     setWorkingPlan(plan);
     try {
+      if (subscription?.status === "active" && subscription.plan !== "free") {
+        await callBilling("change", plan);
+        setConfirming(true);
+        toast.info(`Confirming your ${plan === "pro" ? "Pro" : "Plus"} plan change…`);
+        return;
+      }
       await openSubscriptionCheckout(plan, () => {
         setConfirming(true);
         toast.info("Payment received. Confirming your subscription…");
@@ -39,9 +45,7 @@ export default function Pricing() {
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Checkout could not start");
-    } finally {
-      setWorkingPlan(null);
-    }
+    } finally { setWorkingPlan(null); }
   };
 
   return (
