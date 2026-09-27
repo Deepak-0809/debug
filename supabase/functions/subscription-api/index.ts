@@ -70,17 +70,31 @@ serve(async (req) => {
         return json(req, { error: "No active subscription is available to change." }, 409);
       }
       if (initialized.plan === body.plan) return json(req, { subscription: initialized });
-      await razorpayRequest(`/subscriptions/${encodeURIComponent(initialized.razorpay_subscription_id)}`, "PATCH", {
+      const changed = await razorpayRequest(`/subscriptions/${encodeURIComponent(initialized.razorpay_subscription_id)}`, "PATCH", {
         plan_id: getRazorpayPlanId(body.plan),
         quantity: 1,
         schedule_change_at: "now",
         customer_notify: 1,
         notes: { user_id: auth.userId, plan: body.plan },
       });
-      const { error } = await admin.from("subscriptions").update({ pending_plan: body.plan, updated_at: new Date().toISOString() }).eq("user_id", auth.userId);
+      const isUpgrade = body.plan === "pro" && initialized.plan === "plus";
+      const { data: updated, error } = await admin.rpc("apply_subscription_state", {
+        _user_id: auth.userId,
+        _plan: body.plan,
+        _status: "active",
+        _run_limit: PLAN_CONFIG[body.plan].runLimit,
+        _cycle_start: changed?.current_start ? new Date(changed.current_start * 1000).toISOString() : initialized.cycle_start,
+        _cycle_end: changed?.current_end ? new Date(changed.current_end * 1000).toISOString() : initialized.cycle_end,
+        _grace_period_end: null,
+        _razorpay_customer_id: changed?.customer_id || null,
+        _razorpay_subscription_id: initialized.razorpay_subscription_id,
+        _reset_runs: isUpgrade,
+        _source: "subscription_change",
+        _event_id: null,
+      });
       if (error) throw error;
       console.info("subscription change requested", { userId: auth.userId, plan: body.plan });
-      return json(req, { confirming: true });
+      return json(req, { subscription: updated });
     }
 
     if (action === "cancel") {

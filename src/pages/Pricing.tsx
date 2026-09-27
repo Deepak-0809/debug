@@ -19,8 +19,9 @@ export default function Pricing() {
     try {
       if (subscription?.status === "active" && subscription.plan !== "free") {
         await callBilling("change", plan);
-        setConfirming(true);
-        toast.info(`Confirming your ${plan === "pro" ? "Pro" : "Plus"} plan change…`);
+        await refresh();
+        toast.success(`${plan === "pro" ? "Pro" : "Plus"} is active.`);
+        navigate("/billing");
         return;
       }
       await openSubscriptionCheckout(plan, () => {
@@ -30,7 +31,7 @@ export default function Pricing() {
         const timer = window.setInterval(async () => {
           attempts += 1;
           const result = await refresh();
-          const state = result[0]?.data?.subscription;
+          const state = result.data?.subscription;
           if (state?.status === "active") {
             window.clearInterval(timer);
             setConfirming(false);
