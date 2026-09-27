@@ -34,11 +34,11 @@ export default function RunSingleTestPanel({ onRunSingle, loading, quotaLabel, l
         <Button
           className="w-full gap-2 mt-3 shrink-0"
           variant="secondary"
-          onClick={() => onRunSingle(testInput)}
-          disabled={loading || limitReached}
+          onClick={() => (limitReached ? (window.location.href = "/pricing") : onRunSingle(testInput))}
+          disabled={loading}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
-          {loading ? "Running..." : "Run Test"}
+          {loading ? "Running..." : limitReached ? "Upgrade to Run Test" : "Run Test"}
         </Button>
         <p className="text-[11px] text-muted-foreground mt-1.5">
           {limitReached ? "Upgrade to run another test" : quotaLabel || "Runs both codes with your input and compares outputs"}

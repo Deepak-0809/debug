@@ -62,9 +62,13 @@ export default function ConfigPanel({
           </div>
         )}
 
-        <Button className="w-full gap-2 mt-3 shrink-0" onClick={onFindFailing} disabled={loading || limitReached}>
+        <Button
+          className="w-full gap-2 mt-3 shrink-0"
+          onClick={() => (limitReached ? (window.location.href = "/pricing") : onFindFailing())}
+          disabled={loading}
+        >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          {loading ? "Processing..." : "Find Failing Test Case"}
+          {loading ? "Processing..." : limitReached ? "Upgrade to Find Failing Test" : "Find Failing Test Case"}
         </Button>
         <p className="text-[11px] text-muted-foreground mt-1.5">
           {limitReached ? "Upgrade to start another debug run" : quotaLabel || "AI auto-detects language and input format"}
