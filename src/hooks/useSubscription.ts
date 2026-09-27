@@ -56,6 +56,7 @@ export function useSubscription() {
     remaining: query.data?.subscription
       ? Math.max(query.data.subscription.run_limit - query.data.subscription.runs_used, 0)
       : null,
-    refresh: () => queryClient.invalidateQueries({ queryKey: ["subscription", user?.id] }),
+    refresh: query.refetch,
+    invalidate: () => queryClient.invalidateQueries({ queryKey: ["subscription", user?.id] }),
   };
 }
