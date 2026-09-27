@@ -191,7 +191,7 @@ serve(async (req) => {
         provider = retry.provider; model = retry.model;
       } catch (retryErr) {
         console.error("JSON extraction failed after retry:", retryErr);
-        return new Response(JSON.stringify({ error: "The AI response was incomplete. Please try again — this won't use another run." }), {
+        return new Response(JSON.stringify({ error: "The AI response was incomplete. Please try again." }), {
           status: 422, headers: { ...headers, "Content-Type": "application/json" },
         });
       }
