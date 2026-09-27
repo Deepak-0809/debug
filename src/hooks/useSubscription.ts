@@ -33,8 +33,30 @@ export interface SubscriptionPayload {
   };
 }
 
+function isUnauthorized(error: unknown) {
+  const status = (error as { context?: { status?: number } })?.context?.status;
+  return status === 401;
+}
+
+async function invokeStatus() {
+  return supabase.functions.invoke("subscription-api", { body: { action: "status" } });
+}
+
 async function loadSubscription(): Promise<SubscriptionPayload> {
-  const { data, error } = await supabase.functions.invoke("subscription-api", { body: { action: "status" } });
+  let { data, error } = await invokeStatus();
+  if (error && isUnauthorized(error)) {
+    // Stale/revoked session: try refreshing once, otherwise sign out so the user re-logs in.
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      await supabase.auth.signOut();
+      throw new Error("Your session expired. Please log in again.");
+    }
+    ({ data, error } = await invokeStatus());
+    if (error && isUnauthorized(error)) {
+      await supabase.auth.signOut();
+      throw new Error("Your session expired. Please log in again.");
+    }
+  }
   if (error) throw new Error(error.message || "Unable to load subscription");
   if (data?.error) throw new Error(data.error);
   return data as SubscriptionPayload;
@@ -48,6 +70,7 @@ export function useSubscription() {
     queryFn: loadSubscription,
     enabled: Boolean(user),
     staleTime: 15_000,
+    retry: 1,
   });
   return {
     ...query,
