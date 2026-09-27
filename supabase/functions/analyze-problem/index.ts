@@ -102,19 +102,22 @@ serve(async (req) => {
     if (safeAdditionalInfo?.trim()) userPrompt += `## Additional Info (Problem Statement / Constraints):\n${safeAdditionalInfo}\n\n`;
     userPrompt += "Produce the comprehensive JSON schema now.";
 
-    const { response, provider, model } = await callAIWithFailover({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      model: "google/gemini-2.5-flash",
-      temperature: 0.3,
-      max_tokens: 8000,
-      response_format: { type: "json_object" },
-    });
+    const requestAI = async (compact: boolean) => {
+      const result = await callAIWithFailover({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: compact ? userPrompt + "\n\nIMPORTANT: Keep the JSON compact — short strings, no long lists, and make sure it is complete and valid." : userPrompt },
+        ],
+        model: "google/gemini-2.5-flash",
+        temperature: 0.3,
+        max_tokens: 8000,
+        response_format: { type: "json_object" },
+      });
+      const data = await result.response.json();
+      return { content: data.choices?.[0]?.message?.content as string | undefined, provider: result.provider, model: result.model };
+    };
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    let { content, provider, model } = await requestAI(false);
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
@@ -180,10 +183,18 @@ serve(async (req) => {
     try {
       parsed = extractAndRepairJson(content);
     } catch (parseErr) {
-      console.error("JSON extraction failed:", parseErr);
-      return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: content.substring(0, 500) }), {
-        status: 422, headers: { ...headers, "Content-Type": "application/json" },
-      });
+      console.warn("JSON extraction failed, retrying compact:", parseErr);
+      try {
+        const retry = await requestAI(true);
+        if (!retry.content) throw new Error("empty retry");
+        parsed = extractAndRepairJson(retry.content);
+        provider = retry.provider; model = retry.model;
+      } catch (retryErr) {
+        console.error("JSON extraction failed after retry:", retryErr);
+        return new Response(JSON.stringify({ error: "The AI response was incomplete. Please try again." }), {
+          status: 422, headers: { ...headers, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model, usage: quota.usage }), {
