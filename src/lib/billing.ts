@@ -9,7 +9,14 @@ declare global {
 
 export async function callBilling(action: string, plan?: PlanName) {
   const { data, error } = await supabase.functions.invoke("subscription-api", { body: { action, plan } });
-  if (error) throw new Error(error.message || "Billing request failed");
+  if (error) {
+    let message = "Billing request failed. Please try again.";
+    try {
+      const body = await (error as { context?: Response }).context?.json();
+      if (body?.error) message = body.error;
+    } catch { /* keep default */ }
+    throw new Error(message);
+  }
   if (data?.error) throw new Error(data.error);
   return data;
 }

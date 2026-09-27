@@ -38,9 +38,7 @@ serve(async (req) => {
 
     if (action === "create") {
       if (!isPaidPlan(body?.plan)) return json(req, { error: "Choose Plus or Pro." }, 400);
-      if (initialized?.status === "pending") {
-        return json(req, { error: "A subscription is already awaiting confirmation." }, 409);
-      }
+      // An unpaid pending checkout is simply replaced by the new one.
       const planId = getRazorpayPlanId(body.plan);
       const subscription = await razorpayRequest("/subscriptions", "POST", {
         plan_id: planId,

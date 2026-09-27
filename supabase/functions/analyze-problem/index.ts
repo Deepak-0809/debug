@@ -102,19 +102,22 @@ serve(async (req) => {
     if (safeAdditionalInfo?.trim()) userPrompt += `## Additional Info (Problem Statement / Constraints):\n${safeAdditionalInfo}\n\n`;
     userPrompt += "Produce the comprehensive JSON schema now.";
 
-    const { response, provider, model } = await callAIWithFailover({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      model: "google/gemini-2.5-flash",
-      temperature: 0.3,
-      max_tokens: 8000,
-      response_format: { type: "json_object" },
-    });
+    const requestAI = async (compact: boolean) => {
+      const result = await callAIWithFailover({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: compact ? userPrompt + "\n\nIMPORTANT: Keep the JSON compact — short strings, no long lists, and make sure it is complete and valid." : userPrompt },
+        ],
+        model: "google/gemini-2.5-flash",
+        temperature: 0.3,
+        max_tokens: 8000,
+        response_format: { type: "json_object" },
+      });
+      const data = await result.response.json();
+      return { content: data.choices?.[0]?.message?.content as string | undefined, provider: result.provider, model: result.model };
+    };
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    let { content, provider, model } = await requestAI(false);
 
     if (!content) {
       return new Response(JSON.stringify({ error: "No response from AI" }), {
