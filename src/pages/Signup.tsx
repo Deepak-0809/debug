@@ -64,10 +64,14 @@ export default function Signup() {
       const errorMsg = error.message?.toLowerCase() || "";
       if (errorMsg.includes("duplicate") || errorMsg.includes("username") || errorMsg.includes("profiles_username")) {
         toast.error("Username is already taken. Please choose another.");
-      } else if (error.message?.includes("password") && error.message?.includes("leaked")) {
-        toast.error("This password has been found in a data breach. Please choose a stronger password.");
+      } else if (errorMsg.includes("weak") || errorMsg.includes("leaked") || errorMsg.includes("pwned") || errorMsg.includes("easy to guess")) {
+        toast.error("This password is too common or was found in a data breach. Please choose a stronger, unique password.");
+      } else if (errorMsg.includes("already registered") || errorMsg.includes("already exists")) {
+        toast.error("An account with this email already exists. Please log in instead.");
+      } else if (errorMsg.includes("rate limit")) {
+        toast.error("Too many attempts. Please wait a few minutes and try again.");
       } else {
-        toast.error("Signup failed. Please try again.");
+        toast.error(error.message || "Signup failed. Please try again.");
       }
     } else {
       toast.success("Check your email for a verification link!");
