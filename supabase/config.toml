@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.wrap-class-code]
 verify_jwt = false
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.subscription-api]
+verify_jwt = false
