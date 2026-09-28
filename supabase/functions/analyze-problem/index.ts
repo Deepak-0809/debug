@@ -91,8 +91,7 @@ serve(async (req) => {
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
 
-    const quota = await consumeQuota(auth.userId, actionKey, actionType === "single_test" ? "single_test" : "full_pipeline");
-    if (!quota.ok) return quotaResponse(req, quota);
+    const quotaActionType = actionType === "single_test" ? "single_test" : "full_pipeline";
 
     const safeAdditionalInfo = validateAdditionalInfo(additionalInfo);
 
@@ -196,6 +195,10 @@ serve(async (req) => {
         });
       }
     }
+
+    // Charge the run only after analysis succeeded, so failed AI responses don't burn quota.
+    const quota = await consumeQuota(auth.userId, actionKey, quotaActionType);
+    if (!quota.ok) return quotaResponse(req, quota);
 
     return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model, usage: quota.usage }), {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
