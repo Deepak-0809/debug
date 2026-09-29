@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, unauthorizedResponse, validateAuth } from "../_shared/auth.ts";
 import { createAdminClient } from "../_shared/admin.ts";
-import { getRazorpayPlanId, isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
+import { isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
 import { getPublicRazorpayKey, razorpayRequest } from "../_shared/razorpay.ts";
 
 function json(req: Request, body: unknown, status = 200) {
@@ -38,25 +38,25 @@ serve(async (req) => {
 
     if (action === "create") {
       if (!isPaidPlan(body?.plan)) return json(req, { error: "Choose Plus or Pro." }, 400);
+      // One-time order checkout (works with any card; no recurring mandate needed).
       // An unpaid pending checkout is simply replaced by the new one.
-      const planId = getRazorpayPlanId(body.plan);
-      const subscription = await razorpayRequest("/subscriptions", "POST", {
-        plan_id: planId,
-        total_count: 120,
-        quantity: 1,
-        customer_notify: 1,
+      const order = await razorpayRequest("/orders", "POST", {
+        amount: PLAN_CONFIG[body.plan].priceInr * 100,
+        currency: "INR",
         notes: { user_id: auth.userId, plan: body.plan },
       });
       const { error } = await admin.rpc("set_subscription_pending", {
         _user_id: auth.userId,
         _plan: body.plan,
-        _subscription_id: subscription.id,
+        _subscription_id: order.id,
       });
       if (error) throw error;
-      console.info("subscription checkout created", { userId: auth.userId, plan: body.plan });
+      console.info("order checkout created", { userId: auth.userId, plan: body.plan });
       return json(req, {
         keyId: getPublicRazorpayKey(),
-        subscriptionId: subscription.id,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
         plan: body.plan,
         name: PLAN_CONFIG[body.plan].name,
       });
