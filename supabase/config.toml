@@ -26,6 +26,3 @@ verify_jwt = false
 
 [functions.subscription-api]
 verify_jwt = false
-
-[functions.razorpay-setup]
-verify_jwt = false
