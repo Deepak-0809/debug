@@ -4,7 +4,7 @@ export const PLAN_CONFIG = {
   free: {
     name: "Free",
     interval: "lifetime",
-    runLimit: 5,
+    runLimit: 3,
     singleTestLimit: 20 as number | null,
     singleTestInterval: "monthly",
     priceInr: 0,
