@@ -147,6 +147,8 @@ const Index = () => {
       const { data: testData, error: testError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, actionKey } });
       if (testError) throw new Error(testError.message || "Test case generation failed");
       if (testData?.error) throw new Error(testData.error);
+      // Step 3 completed: the backend counts this as one run now.
+      void refreshSubscription();
       const testResult = testData?.result;
       const testCount = testResult?.test_cases?.length || 0;
       if (testCount === 0) { toast.warning("No test cases generated."); setProgressStep("No test cases generated."); return; }
