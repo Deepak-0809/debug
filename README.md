@@ -1,75 +1,96 @@
-# Welcome to your Lovable project
+# 🐛 Debug
 
-## Project info
+> A full-stack competitive programming debugger built for CP enthusiasts.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen)](https://lovable.dev/projects/7d0d176c-48bf-4107-ac98-634944c0e677)
+[![GitHub](https://img.shields.io/badge/GitHub-Deepak--0809%2Fdebug-blue)](https://github.com/Deepak-0809/debug)
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## What is Debug?
 
-**Use Lovable**
+**Debug** is a developer tool designed to streamline the competitive programming workflow. Instead of juggling multiple tabs, terminals, and manual test comparisons, Debug gives you a single interface to write, run, and validate your solutions against test cases — fast.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Features
 
-**Use your preferred IDE**
+- Write and run C++ code directly in the browser
+- Add custom test cases and expected outputs
+- Instant diff view between your output and expected output
+- Clean, distraction-free editor UI
+- Built for speed — zero setup, just code
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Tech Stack
 
-Follow these steps:
+| Layer      | Technology               |
+|------------|--------------------------|
+| Frontend   | React + TypeScript       |
+| Build Tool | Vite                     |
+| Styling    | Tailwind CSS + shadcn-ui |
+| Deployment | Lovable                  |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Getting Started
 
-# Step 3: Install the necessary dependencies.
+### Prerequisites
+
+- Node.js (install via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- npm
+
+### Local Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Deepak-0809/debug.git
+
+# Navigate into the project
+cd debug
+
+# Install dependencies
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Then open `http://localhost:5173` in your browser.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Deployment
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+This project is deployed via [Lovable](https://lovable.dev).  
+To deploy your own fork: open the project in Lovable and click **Share → Publish**.
 
-## What technologies are used for this project?
+### Custom Domain
 
-This project is built with:
+Navigate to **Project → Settings → Domains → Connect Domain**.  
+Docs: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## Contributing
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
 
-## Can I connect a custom domain to my Lovable project?
+1. Fork the repo — [github.com/Deepak-0809/debug](https://github.com/Deepak-0809/debug)
+2. Create your feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'add: your feature'`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a Pull Request
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Author
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Deepak**  
 
-Happy debugging with me.
+---
+
+## License
+
+MIT
