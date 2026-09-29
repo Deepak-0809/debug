@@ -54,7 +54,7 @@ serve(async (req) => {
   if (claimError) return json({ error: "Unable to record webhook" }, 500);
 
   try {
-    if (!["subscription.activated", "subscription.charged", "subscription.cancelled", "subscription.halted", "payment.failed"].includes(eventType)) {
+    if (!["subscription.activated", "subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.expired", "payment.failed"].includes(eventType)) {
       return json({ received: true, ignored: true });
     }
     if (!subscriptionId) throw new Error("Webhook is missing a subscription reference");
