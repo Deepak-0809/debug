@@ -9,6 +9,7 @@ export interface PlanDetails {
   name: string;
   interval: "lifetime" | "monthly";
   runLimit: number;
+  singleTestLimit: number | null;
   priceInr: number;
 }
 
@@ -18,6 +19,8 @@ export interface SubscriptionDetails {
   status: SubscriptionStatus;
   runs_used: number;
   run_limit: number;
+  single_tests_used: number;
+  single_tests_period_start: string;
   cycle_start: string | null;
   cycle_end: string | null;
   grace_period_end: string | null;
@@ -79,6 +82,13 @@ export function useSubscription() {
     remaining: query.data?.subscription
       ? Math.max(query.data.subscription.run_limit - query.data.subscription.runs_used, 0)
       : null,
+    singleLimit: query.data ? (query.data.config.plans[query.data.subscription.plan]?.singleTestLimit ?? null) : undefined,
+    singleRemaining: (() => {
+      const d = query.data;
+      if (!d) return undefined;
+      const lim = d.config.plans[d.subscription.plan]?.singleTestLimit ?? null;
+      return lim === null ? null : Math.max(lim - (d.subscription.single_tests_used ?? 0), 0);
+    })(),
     refresh: query.refetch,
     invalidate: () => queryClient.invalidateQueries({ queryKey: ["subscription", user?.id] }),
   };
