@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
-import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
 import { chargeQuota, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 function getSystemPrompt(retryRound: number): string {
@@ -221,6 +221,7 @@ serve(async (req) => {
     const userPrompt = `Generate test cases for this problem${roundLabel}:\n\n${JSON.stringify(trimmedSchema, null, 2)}\n\nGenerate ${testCount} targeted test cases. Each input must be a LITERAL string with \\n for newlines. Keep N ≤ 200.\n\nCRITICAL SIZE LIMITS to avoid truncation:\n- Each "input" string MUST be under 1500 characters total.\n- For array test cases, use AT MOST 30 elements per array (NOT thousands).\n- To stress-test large q/n, use SMALL representative arrays (e.g. q=10 with values like [1, 2, 1000000000]) — NOT q=10000 with 10000 literal values.\n- Output the entire JSON compactly. Do not pad inputs with repeated values.`;
 
     const { response, provider, model } = await callAIWithFailover({
+      userId: auth.userId, feature: "generate-test-cases",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
@@ -275,6 +276,8 @@ serve(async (req) => {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
+    const aiErr = aiErrorResponse(e, headers);
+    if (aiErr) return aiErr;
     console.error("generate-test-cases error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...headers, "Content-Type": "application/json" } }
