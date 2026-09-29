@@ -101,8 +101,25 @@ serve(async (req) => {
         _event_id: `verify:${paymentId}`,
       });
       if (error) throw error;
+      await admin.from("payments").upsert({
+        user_id: auth.userId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        plan,
+        amount: Number(order?.amount || PLAN_CONFIG[plan].priceInr * 100),
+        currency: order?.currency || "INR",
+        status: "paid",
+        cycle_start: updated?.cycle_start ?? null,
+        cycle_end: updated?.cycle_end ?? null,
+      }, { onConflict: "razorpay_order_id", ignoreDuplicates: true });
       console.info("order payment verified", { userId: auth.userId, plan });
       return json(req, { subscription: updated });
+    }
+
+    if (action === "history") {
+      const { data, error } = await admin.from("payments").select("id, plan, amount, currency, status, razorpay_payment_id, cycle_start, cycle_end, created_at").eq("user_id", auth.userId).order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      return json(req, { payments: data ?? [] });
     }
 
     if (action === "change") {

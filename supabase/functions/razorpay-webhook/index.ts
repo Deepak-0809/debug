@@ -81,6 +81,19 @@ serve(async (req) => {
         _event_id: eventId,
       });
       if (applyError) throw applyError;
+      if (reference) {
+        await admin.from("payments").upsert({
+          user_id: userId,
+          razorpay_order_id: reference,
+          razorpay_payment_id: paymentEntity?.id || null,
+          plan,
+          amount: Number(orderEntity?.amount || paymentEntity?.amount || PLAN_CONFIG[plan].priceInr * 100),
+          currency: orderEntity?.currency || paymentEntity?.currency || "INR",
+          status: "paid",
+          cycle_start: cycleStart,
+          cycle_end: cycleEnd,
+        }, { onConflict: "razorpay_order_id", ignoreDuplicates: true });
+      }
       console.info("order payment applied", { eventType, userId, plan });
       return json({ received: true });
     }
