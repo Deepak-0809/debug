@@ -273,6 +273,8 @@ export type Database = {
           razorpay_subscription_id: string | null
           run_limit: number
           runs_used: number
+          single_tests_period_start: string
+          single_tests_used: number
           status: string
           updated_at: string
           user_id: string
@@ -288,6 +290,8 @@ export type Database = {
           razorpay_subscription_id?: string | null
           run_limit?: number
           runs_used?: number
+          single_tests_period_start?: string
+          single_tests_used?: number
           status?: string
           updated_at?: string
           user_id: string
@@ -303,6 +307,8 @@ export type Database = {
           razorpay_subscription_id?: string | null
           run_limit?: number
           runs_used?: number
+          single_tests_period_start?: string
+          single_tests_used?: number
           status?: string
           updated_at?: string
           user_id?: string
@@ -378,6 +384,8 @@ export type Database = {
           razorpay_subscription_id: string | null
           run_limit: number
           runs_used: number
+          single_tests_period_start: string
+          single_tests_used: number
           status: string
           updated_at: string
           user_id: string
@@ -421,6 +429,8 @@ export type Database = {
           razorpay_subscription_id: string | null
           run_limit: number
           runs_used: number
+          single_tests_period_start: string
+          single_tests_used: number
           status: string
           updated_at: string
           user_id: string
@@ -449,6 +459,8 @@ export type Database = {
           razorpay_subscription_id: string | null
           run_limit: number
           runs_used: number
+          single_tests_period_start: string
+          single_tests_used: number
           status: string
           updated_at: string
           user_id: string
@@ -459,6 +471,11 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      single_test_limit: { Args: { _plan: string }; Returns: number }
+      usage_json: {
+        Args: { _sub: Database["public"]["Tables"]["subscriptions"]["Row"] }
+        Returns: Json
       }
       verify_run_action: {
         Args: { _action_key: string; _user_id: string }
