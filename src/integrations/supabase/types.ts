@@ -416,6 +416,10 @@ export type Database = {
         Args: { _action_key: string; _action_type: string; _user_id: string }
         Returns: Json
       }
+      expire_subscription_if_due: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       initialize_subscription: {
         Args: { _user_id: string }
         Returns: {
