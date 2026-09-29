@@ -52,7 +52,8 @@ export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResu
       }
 
       const status = resp.status;
-      await resp.text().catch(() => "");
+      const errBody = await resp.text().catch(() => "");
+      console.warn(`[ai-router] ${id} HTTP ${status}: ${errBody.slice(0, 300)}`);
       lastCode = `http_${status}`;
 
       if (id === "lovable") {
