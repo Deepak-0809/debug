@@ -15,7 +15,7 @@ export const PLAN_CONFIG = {
     runLimit: 20,
     singleTestLimit: 100 as number | null,
     singleTestInterval: "monthly",
-    priceInr: 299,
+    priceInr: 10, // TEMP: ₹10 live test — restore to 299 after webhook testing
   },
   pro: {
     name: "Pro",
