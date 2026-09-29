@@ -131,28 +131,45 @@ export type Database = {
         Row: {
           action_key: string
           action_type: string
+          charged_at: string | null
           created_at: string
           id: string
           plan_at_use: string
+          run_id: string | null
+          state: string
           user_id: string
         }
         Insert: {
           action_key: string
           action_type: string
+          charged_at?: string | null
           created_at?: string
           id?: string
           plan_at_use: string
+          run_id?: string | null
+          state?: string
           user_id: string
         }
         Update: {
           action_key?: string
           action_type?: string
+          charged_at?: string | null
           created_at?: string
           id?: string
           plan_at_use?: string
+          run_id?: string | null
+          state?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "run_usage_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       runs: {
         Row: {
@@ -372,6 +389,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      charge_run_quota: {
+        Args: { _action_key: string; _run_id?: string; _user_id: string }
+        Returns: Json
+      }
       check_rate_limit: {
         Args: {
           _endpoint: string
@@ -410,6 +431,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reserve_run_quota: {
+        Args: { _action_key: string; _action_type: string; _user_id: string }
+        Returns: Json
       }
       set_subscription_pending: {
         Args: { _plan: string; _subscription_id: string; _user_id: string }
