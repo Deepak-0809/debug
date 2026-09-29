@@ -38,9 +38,11 @@ export async function openSubscriptionCheckout(plan: "plus" | "pro", onSubmitted
   if (!window.Razorpay) throw new Error("Secure checkout is unavailable");
   new window.Razorpay({
     key: checkout.keyId,
-    subscription_id: checkout.subscriptionId,
+    order_id: checkout.orderId,
+    amount: checkout.amount,
+    currency: checkout.currency,
     name: "DebugCP",
-    description: `${checkout.name} monthly subscription`,
+    description: `${checkout.name} plan — 1 month`,
     theme: { color: "hsl(var(--primary))" },
     handler: onSubmitted,
     modal: { ondismiss: () => undefined },
