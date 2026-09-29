@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { callAIWithFailover } from "../_shared/ai-failover.ts";
-import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { chargeQuota, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 function getSystemPrompt(retryRound: number): string {
   const base = `You are an expert competitive programming stress tester. Your job is NOT to generate random test cases — your job is to BREAK code and expose bugs.
@@ -269,7 +269,9 @@ serve(async (req) => {
       await auth.supabase.from("runs").update({ status: "tests_generated" }).eq("id", runId);
     }
 
-    return new Response(JSON.stringify({ result: parsed, ai_provider: provider, ai_model: model }), {
+    // Step 3 reached successfully: this is one complete run.
+    const usage = safeRetryRound === 0 ? await chargeQuota(auth.userId, actionKey, runId) : null;
+    return new Response(JSON.stringify({ result: parsed, ai_provider: provider, ai_model: model, usage }), {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {

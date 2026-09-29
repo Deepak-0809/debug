@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validateTestCases, validationErrorResponse } from "../_shared/validation.ts";
-import { consumeQuota, quotaResponse, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { chargeQuota, consumeQuota, quotaResponse, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 // Primary: RapidAPI (100 free/day, faster)
 // Fallback: Public CE (unlimited, may rate-limit)
@@ -198,8 +198,9 @@ serve(async (req) => {
       await auth.supabase.from("runs").update(updatePayload).eq("id", runId);
     }
 
+    const usage = actionType === "single_test" ? await chargeQuota(auth.userId, actionKey, null) : null;
     return new Response(JSON.stringify({
-      results: executionResults, summary: { total: executionResults.length, passing: executionResults.length - failingCases.length, failing: failingCases.length, first_failing: firstFailing },
+      results: executionResults, summary: { total: executionResults.length, passing: executionResults.length - failingCases.length, failing: failingCases.length, first_failing: firstFailing }, usage,
     }), { status: 200, headers: { ...headers, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("execute-code error:", e);
