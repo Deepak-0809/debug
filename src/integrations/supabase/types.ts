@@ -70,6 +70,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          cycle_end: string | null
+          cycle_start: string | null
+          id: string
+          plan: string
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          cycle_end?: string | null
+          cycle_start?: string | null
+          id?: string
+          plan: string
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          cycle_end?: string | null
+          cycle_start?: string | null
+          id?: string
+          plan?: string
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auth_provider: string | null
