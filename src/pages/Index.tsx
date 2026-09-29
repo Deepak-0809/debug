@@ -29,7 +29,7 @@ const sanitizeCode = (code: string): string => {
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
-  const { subscription, remaining, refresh: refreshSubscription } = useSubscription();
+  const { subscription, remaining, singleRemaining, singleLimit, refresh: refreshSubscription } = useSubscription();
   const [buggyCode, setBuggyCode] = useState("");
   const [correctCode, setCorrectCode] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
@@ -458,7 +458,7 @@ const Index = () => {
         </div>
       </header>
 
-      <SubscriptionStatus subscription={subscription} remaining={remaining} onPricing={() => navigate("/pricing")} onBilling={() => navigate("/billing")} />
+      <SubscriptionStatus subscription={subscription} remaining={remaining} singleRemaining={singleRemaining} singleLimit={singleLimit} onPricing={() => navigate("/pricing")} onBilling={() => navigate("/billing")} />
 
       {/* Scrollable main area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -481,12 +481,12 @@ const Index = () => {
               onFindFailing={handleFindFailing}
               loading={loading}
               progressStep={progressStep}
-              quotaLabel={remaining === null || !subscription ? undefined : `${remaining} of ${subscription.run_limit} runs remaining`}
+              quotaLabel={remaining === null || !subscription ? undefined : `${remaining} of ${subscription.run_limit} failing-test searches left`}
               limitReached={remaining === 0}
             />
           </div>
           <div>
-            <RunSingleTestPanel onRunSingle={handleRunSingle} loading={singleTestLoading} quotaLabel={remaining === null || !subscription ? undefined : `${remaining} of ${subscription.run_limit} runs remaining`} limitReached={remaining === 0} />
+            <RunSingleTestPanel onRunSingle={handleRunSingle} loading={singleTestLoading} quotaLabel={singleRemaining === undefined ? undefined : singleRemaining === null ? "Unlimited single tests" : `${singleRemaining} of ${singleLimit} single tests left this month`} limitReached={singleRemaining === 0} />
           </div>
         </div>
 

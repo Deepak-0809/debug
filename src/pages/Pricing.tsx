@@ -71,7 +71,8 @@ export default function Pricing() {
                     <span className="text-4xl font-bold">₹{details.priceInr}</span>
                     <span className="pb-1 text-sm text-muted-foreground">{details.interval === "monthly" ? "/ month" : "once"}</span>
                   </div>
-                  <div className="mt-6 flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary" />{details.runLimit} {details.interval === "monthly" ? "runs each billing cycle" : "lifetime runs"}</div>
+                  <div className="mt-6 flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary" />{details.runLimit} failing-test searches {details.interval === "monthly" ? "per month" : "total"}</div>
+                  <div className="mt-2 flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary" />{details.singleTestLimit === null ? "Unlimited" : details.singleTestLimit} single test runs per month</div>
                   <div className="mt-2 flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary" />Full pipeline retries included</div>
                   <div className="mt-auto pt-8">
                     <Button className="w-full" variant={current ? "outline" : plan === "plus" ? "default" : "secondary"} disabled={current || plan === "free" || Boolean(workingPlan) || confirming} onClick={() => choosePlan(plan)}>

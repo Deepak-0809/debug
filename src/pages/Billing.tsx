@@ -14,7 +14,7 @@ function formatDate(value: string | null | undefined) {
 
 export default function Billing() {
   const navigate = useNavigate();
-  const { subscription, config, remaining, isLoading, refresh } = useSubscription();
+  const { subscription, config, remaining, singleRemaining, singleLimit, isLoading, refresh } = useSubscription();
   const [cancelling, setCancelling] = useState(false);
 
   const cancel = async () => {
@@ -51,8 +51,9 @@ export default function Billing() {
                 <Button onClick={() => navigate("/pricing")}>{subscription.plan === "free" ? "Upgrade" : "Change plan"}</Button>
               </div>
               <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                <div><div className="mb-2 flex items-center gap-2 text-sm font-medium"><Gauge className="h-4 w-4 text-primary" />Run allowance</div><p className="text-2xl font-bold">{remaining} remaining</p><Progress className="mt-3 h-2" value={(subscription.runs_used / Math.max(subscription.run_limit, 1)) * 100} /><p className="mt-2 text-xs text-muted-foreground">{subscription.runs_used} of {subscription.run_limit} used</p></div>
-                <div><div className="mb-2 flex items-center gap-2 text-sm font-medium"><CalendarDays className="h-4 w-4 text-primary" />Next renewal</div><p className="text-2xl font-bold">{formatDate(subscription.cycle_end)}</p><p className="mt-2 text-xs text-muted-foreground">Free allowances do not renew.</p></div>
+                <div><div className="mb-2 flex items-center gap-2 text-sm font-medium"><Gauge className="h-4 w-4 text-primary" />Failing-test searches</div><p className="text-2xl font-bold">{remaining} remaining</p><Progress className="mt-3 h-2" value={(subscription.runs_used / Math.max(subscription.run_limit, 1)) * 100} /><p className="mt-2 text-xs text-muted-foreground">{subscription.runs_used} of {subscription.run_limit} used</p></div>
+                <div><div className="mb-2 flex items-center gap-2 text-sm font-medium"><Gauge className="h-4 w-4 text-primary" />Single test runs (monthly)</div><p className="text-2xl font-bold">{singleRemaining === null ? "Unlimited" : `${singleRemaining ?? 0} remaining`}</p>{singleLimit != null && <Progress className="mt-3 h-2" value={(subscription.single_tests_used / Math.max(singleLimit, 1)) * 100} />}<p className="mt-2 text-xs text-muted-foreground">{subscription.single_tests_used} used{singleLimit != null ? ` of ${singleLimit}` : ""}</p></div>
+                <div><div className="mb-2 flex items-center gap-2 text-sm font-medium"><CalendarDays className="h-4 w-4 text-primary" />Next renewal</div><p className="text-2xl font-bold">{formatDate(subscription.cycle_end)}</p><p className="mt-2 text-xs text-muted-foreground">Free searches do not renew; free single tests reset monthly.</p></div>
               </div>
             </section>
             {subscription.plan !== "free" && ["active", "past_due"].includes(subscription.status) && (

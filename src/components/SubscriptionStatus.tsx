@@ -5,6 +5,8 @@ import type { SubscriptionDetails } from "@/hooks/useSubscription";
 interface SubscriptionStatusProps {
   subscription?: SubscriptionDetails;
   remaining: number | null;
+  singleRemaining?: number | null;
+  singleLimit?: number | null;
   onPricing: () => void;
   onBilling: () => void;
 }
@@ -14,24 +16,25 @@ function suggestion(sub: SubscriptionDetails, remaining: number): string | null 
   if (sub.status === "pending") return "Your upgrade is waiting for payment confirmation.";
   const low = remaining <= Math.max(1, Math.ceil(sub.run_limit * 0.2));
   if (sub.plan === "free") {
-    if (remaining === 0) return "Free runs used up. Plus gives you 20 runs every month.";
-    if (low) return "Running low — Plus gives you 20 runs every month.";
+    if (remaining === 0) return "Free searches used up. Plus gives 20 searches + 100 single tests monthly.";
+    if (low) return "Running low — Plus gives 20 searches + 100 single tests monthly.";
     return null;
   }
   if (sub.plan === "plus") {
-    if (remaining === 0) return "This month's runs are used. Upgrade to Pro for 100 runs now.";
-    if (low) return "Running low — Pro gives you 100 runs a month.";
+    if (remaining === 0) return "This month's runs are used. Pro gives 100 searches + unlimited single tests.";
+    if (low) return "Running low — Pro gives 100 searches + unlimited single tests.";
     return null;
   }
   if (remaining === 0) return "This month's runs are used. They renew on your next billing date.";
   return null;
 }
 
-export function SubscriptionStatus({ subscription, remaining, onPricing, onBilling }: SubscriptionStatusProps) {
+export function SubscriptionStatus({ subscription, remaining, singleRemaining, singleLimit, onPricing, onBilling }: SubscriptionStatusProps) {
   if (!subscription || remaining === null) return null;
   const limitReached = remaining === 0;
   const pastDue = subscription.status === "past_due";
-  const tip = suggestion(subscription, remaining);
+  let tip = suggestion(subscription, remaining);
+  if (!tip && singleRemaining === 0) tip = subscription.plan === "free" ? "Single tests used this month. Plus gives 100 a month." : "Single tests used this month. Pro gives unlimited.";
   const canUpgrade = subscription.plan !== "pro" && subscription.status !== "pending";
   const warn = pastDue || limitReached;
 
@@ -40,7 +43,7 @@ export function SubscriptionStatus({ subscription, remaining, onPricing, onBilli
       <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
         {warn ? <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" /> : <Gauge className="h-4 w-4 shrink-0 text-primary" />}
         <span className="font-semibold text-foreground">
-          {remaining} of {subscription.run_limit} runs left
+          {remaining} of {subscription.run_limit} searches left · {singleRemaining === null ? "unlimited" : `${singleRemaining ?? 0} of ${singleLimit}`} single tests
         </span>
         <span className="text-muted-foreground">· {subscription.plan.toUpperCase()} plan</span>
         {tip && (
