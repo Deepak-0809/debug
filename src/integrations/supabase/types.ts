@@ -493,10 +493,6 @@ export type Database = {
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_runs: { Args: never; Returns: undefined }
-      consume_run_quota: {
-        Args: { _action_key: string; _action_type: string; _user_id: string }
-        Returns: Json
-      }
       expire_subscription_if_due: {
         Args: { _user_id: string }
         Returns: undefined

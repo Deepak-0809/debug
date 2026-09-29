@@ -115,7 +115,7 @@ serve(async (req) => {
     const cycleEnd = dateFromEpoch(subscriptionEntity?.current_end) || current?.cycle_end || null;
     let nextPlan = plan;
     let nextStatus = current?.status || "none";
-    let runLimit = plan && plan in PLAN_CONFIG ? PLAN_CONFIG[plan as PaidPlan].runLimit : current?.run_limit || 5;
+    let runLimit = plan && plan in PLAN_CONFIG ? PLAN_CONFIG[plan as PaidPlan].runLimit : current?.run_limit || PLAN_CONFIG.free.runLimit;
     let graceEnd: string | null = null;
     let resetRuns = false;
 
