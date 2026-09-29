@@ -62,6 +62,8 @@ serve(async (req) => {
       const plan = resolvePlan(source);
       if (!userId || !plan) return json({ received: true, ignored: true });
       const reference = orderEntity?.id || paymentEntity?.order_id || paymentEntity?.id;
+      const { data: existing } = await admin.from("subscriptions").select("status, razorpay_subscription_id").eq("user_id", userId).maybeSingle();
+      if (existing?.status === "active" && existing?.razorpay_subscription_id === reference) return json({ received: true, duplicate: true });
       const cycleStart = new Date().toISOString();
       const cycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const { error: applyError } = await admin.rpc("apply_subscription_state", {

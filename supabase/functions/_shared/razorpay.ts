@@ -53,3 +53,12 @@ export async function verifyWebhookSignature(rawBody: string, signature: string 
 export async function sha256(value: string) {
   return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
 }
+export async function verifyPaymentSignature(orderId: string, paymentId: string, signature: string) {
+  const { keySecret } = credentials();
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(keySecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const expected = hex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${orderId}|${paymentId}`)));
+  if (expected.length !== signature.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  return mismatch === 0;
+}
