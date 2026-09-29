@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validateAdditionalInfo, validationErrorResponse } from "../_shared/validation.ts";
-import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
 import { reserveQuota, quotaResponse } from "../_shared/quota.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programming analyst. Your task is to analyze provided code and/or problem description and produce a comprehensive JSON schema that describes:
@@ -106,6 +106,7 @@ serve(async (req) => {
 
     const requestAI = async (compact: boolean) => {
       const result = await callAIWithFailover({
+      userId: auth.userId, feature: "analyze-problem",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: compact ? userPrompt + "\n\nIMPORTANT: Keep the JSON compact — short strings, no long lists, and make sure it is complete and valid." : userPrompt },
@@ -204,6 +205,8 @@ serve(async (req) => {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
+    const aiErr = aiErrorResponse(e, headers);
+    if (aiErr) return aiErr;
     console.error("analyze-problem error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),

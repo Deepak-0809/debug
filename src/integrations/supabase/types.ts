@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          failover_count: number
+          feature: string | null
+          id: string
+          model: string | null
+          plan: string | null
+          provider_used: string | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          failover_count?: number
+          feature?: string | null
+          id?: string
+          model?: string | null
+          plan?: string | null
+          provider_used?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          failover_count?: number
+          feature?: string | null
+          id?: string
+          model?: string | null
+          plan?: string | null
+          provider_used?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string

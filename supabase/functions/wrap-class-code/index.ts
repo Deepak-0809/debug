@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
-import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
 import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
 
 const SYSTEM_PROMPT = `You are an expert competitive programmer. Your ONLY job is to generate a main() function that:
@@ -87,6 +87,7 @@ The main() must read stdin per the schema, call the Solution method, and print t
 Output ONLY raw code.`;
 
     const { response, provider, model } = await callAIWithFailover({
+      userId: auth.userId, feature: "wrap-class-code",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
@@ -130,6 +131,8 @@ Output ONLY raw code.`;
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
     );
   } catch (e) {
+    const aiErr = aiErrorResponse(e, headers);
+    if (aiErr) return aiErr;
     console.error("wrap-class-code error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),

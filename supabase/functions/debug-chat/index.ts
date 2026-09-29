@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateChatMessages, validationErrorResponse } from "../_shared/validation.ts";
-import { callAIWithFailover } from "../_shared/ai-failover.ts";
+import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
 
 serve(async (req) => {
   const headers = getCorsHeaders(req);
@@ -45,6 +45,7 @@ CRITICAL RESPONSE RULES:
     }
 
     const { response, provider, model } = await callAIWithFailover({
+      userId: auth.userId, feature: "debug-chat",
       messages: [
         { role: "system", content: systemPrompt },
         ...messages,
@@ -62,6 +63,8 @@ CRITICAL RESPONSE RULES:
 
     return new Response(response.body, { headers: responseHeaders });
   } catch (e) {
+    const aiErr = aiErrorResponse(e, headers);
+    if (aiErr) return aiErr;
     console.error("debug-chat error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
