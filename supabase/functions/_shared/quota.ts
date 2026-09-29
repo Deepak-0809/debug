@@ -10,28 +10,41 @@ function parseActionKey(value: unknown): string | null {
     : null;
 }
 
-export async function consumeQuota(userId: string, actionKeyValue: unknown, actionType: RunActionType) {
+// Hold a run at the start of an action. Does not count against the allowance yet.
+export async function reserveQuota(userId: string, actionKeyValue: unknown, actionType: RunActionType) {
   const actionKey = parseActionKey(actionKeyValue);
   if (!actionKey) return { ok: false as const, reason: "INVALID_ACTION_KEY" as const };
   const admin = createAdminClient();
-  const { data, error } = await admin.rpc("consume_run_quota", {
-    _user_id: userId,
-    _action_key: actionKey,
-    _action_type: actionType,
+  const { data, error } = await admin.rpc("reserve_run_quota", {
+    _user_id: userId, _action_key: actionKey, _action_type: actionType,
   });
   if (error) {
-    console.error("quota consume failed", { userId, actionType, message: error.message });
+    console.error("quota reserve failed", { userId, actionType, message: error.message });
     throw new Error("Unable to verify run allowance");
   }
-  console.info("quota decision", {
-    userId,
-    actionType,
-    allowed: data?.allowed === true,
-    remaining: data?.remaining,
-    alreadyConsumed: data?.already_consumed === true,
-  });
+  console.info("quota reserve", { userId, actionType, allowed: data?.allowed === true, remaining: data?.remaining });
   return { ok: data?.allowed === true, reason: data?.code || null, usage: data } as const;
 }
+
+// Count the run: called only when the run completes end to end (step 3 / single test result).
+export async function chargeQuota(userId: string, actionKeyValue: unknown, runId?: string | null) {
+  const actionKey = parseActionKey(actionKeyValue);
+  if (!actionKey) return null;
+  const admin = createAdminClient();
+  const validRunId = typeof runId === "string" && /^[0-9a-f-]{36}$/i.test(runId) ? runId : null;
+  const { data, error } = await admin.rpc("charge_run_quota", {
+    _user_id: userId, _action_key: actionKey, _run_id: validRunId,
+  });
+  if (error) {
+    console.error("quota charge failed", { userId, message: error.message });
+    return null;
+  }
+  console.info("quota charge", { userId, charged: data?.charged, remaining: data?.remaining, already: data?.already_charged });
+  return data;
+}
+
+// Backwards-compatible alias: reserve only.
+export const consumeQuota = reserveQuota;
 
 export async function verifyQuotaAction(userId: string, actionKeyValue: unknown) {
   const actionKey = parseActionKey(actionKeyValue);
