@@ -63,11 +63,8 @@ export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResu
         if (status === 400) throw new AIRouterError("Invalid AI request", 400, "bad_request");
         throw new AIRouterError("AI service is temporarily unavailable", 502, lastCode);
       }
-      if (status === 400) {
-        // Invalid request — failing over won't help.
-        logUsage({ ...base, provider_used: id, model, success: false, failover_count: failovers, error_code: lastCode });
-        throw new AIRouterError("Invalid AI request", 400, "bad_request");
-      }
+      // Non-final provider failed (bad key, no credits, rate limit, 5xx, or a provider-specific 400):
+      // fall through. If the request itself is invalid, Lovable AI returns the 400 at the end.
       console.warn(`[ai-router] ✗ ${id} returned ${status}, failing over`);
     } catch (e) {
       if (timer) clearTimeout(timer);
