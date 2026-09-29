@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, unauthorizedResponse, validateAuth } from "../_shared/auth.ts";
 import { createAdminClient } from "../_shared/admin.ts";
-import { getRazorpayPlanId, isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
+import { isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
 import { getPublicRazorpayKey, razorpayRequest } from "../_shared/razorpay.ts";
 
 function json(req: Request, body: unknown, status = 200) {

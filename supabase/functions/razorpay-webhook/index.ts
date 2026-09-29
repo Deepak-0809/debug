@@ -54,6 +54,35 @@ serve(async (req) => {
   if (claimError) return json({ error: "Unable to record webhook" }, 500);
 
   try {
+    // One-time order payments: activate the plan for one month from payment.
+    if (eventType === "payment.captured" || eventType === "order.paid") {
+      const orderEntity = payload?.payload?.order?.entity || null;
+      const source = orderEntity || paymentEntity || {};
+      const userId = source?.notes?.user_id;
+      const plan = resolvePlan(source);
+      if (!userId || !plan) return json({ received: true, ignored: true });
+      const reference = orderEntity?.id || paymentEntity?.order_id || paymentEntity?.id;
+      const cycleStart = new Date().toISOString();
+      const cycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error: applyError } = await admin.rpc("apply_subscription_state", {
+        _user_id: userId,
+        _plan: plan,
+        _status: "active",
+        _run_limit: PLAN_CONFIG[plan].runLimit,
+        _cycle_start: cycleStart,
+        _cycle_end: cycleEnd,
+        _grace_period_end: null,
+        _razorpay_customer_id: paymentEntity?.customer_id || null,
+        _razorpay_subscription_id: reference,
+        _reset_runs: true,
+        _source: "razorpay_webhook",
+        _event_id: eventId,
+      });
+      if (applyError) throw applyError;
+      console.info("order payment applied", { eventType, userId, plan });
+      return json({ received: true });
+    }
+
     if (!["subscription.activated", "subscription.charged", "subscription.cancelled", "subscription.halted", "subscription.completed", "subscription.expired", "payment.failed"].includes(eventType)) {
       return json({ received: true, ignored: true });
     }
