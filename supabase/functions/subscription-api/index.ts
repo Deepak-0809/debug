@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, unauthorizedResponse, validateAuth } from "../_shared/auth.ts";
 import { createAdminClient } from "../_shared/admin.ts";
 import { isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
-import { getPublicRazorpayKey, razorpayRequest } from "../_shared/razorpay.ts";
+import { getPublicRazorpayKey, razorpayRequest, verifyPaymentSignature } from "../_shared/razorpay.ts";
 
 function json(req: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -60,6 +60,49 @@ serve(async (req) => {
         plan: body.plan,
         name: PLAN_CONFIG[body.plan].name,
       });
+    }
+
+    if (action === "verify") {
+      const orderId = typeof body?.orderId === "string" ? body.orderId : "";
+      const paymentId = typeof body?.paymentId === "string" ? body.paymentId : "";
+      const signature = typeof body?.signature === "string" ? body.signature : "";
+      if (!/^order_[A-Za-z0-9]+$/.test(orderId) || !/^pay_[A-Za-z0-9]+$/.test(paymentId) || !/^[a-f0-9]{64}$/.test(signature)) {
+        return json(req, { error: "Invalid payment details." }, 400);
+      }
+      if (!(await verifyPaymentSignature(orderId, paymentId, signature))) {
+        return json(req, { error: "Payment could not be verified." }, 400);
+      }
+      if (initialized?.status === "active" && initialized?.razorpay_subscription_id === orderId) {
+        return json(req, { subscription: initialized });
+      }
+      const order = await razorpayRequest(`/orders/${encodeURIComponent(orderId)}`);
+      const plan = order?.notes?.plan;
+      if (order?.notes?.user_id !== auth.userId || !isPaidPlan(plan)) {
+        return json(req, { error: "This payment does not belong to your account." }, 403);
+      }
+      if (order?.status !== "paid" && Number(order?.amount_paid || 0) < Number(order?.amount || 1)) {
+        const payment = await razorpayRequest(`/payments/${encodeURIComponent(paymentId)}`);
+        if (payment?.order_id !== orderId || !["captured", "authorized"].includes(payment?.status)) {
+          return json(req, { error: "Payment is not complete yet." }, 409);
+        }
+      }
+      const { data: updated, error } = await admin.rpc("apply_subscription_state", {
+        _user_id: auth.userId,
+        _plan: plan,
+        _status: "active",
+        _run_limit: PLAN_CONFIG[plan].runLimit,
+        _cycle_start: new Date().toISOString(),
+        _cycle_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        _grace_period_end: null,
+        _razorpay_customer_id: null,
+        _razorpay_subscription_id: orderId,
+        _reset_runs: true,
+        _source: "checkout_verify",
+        _event_id: `verify:${paymentId}`,
+      });
+      if (error) throw error;
+      console.info("order payment verified", { userId: auth.userId, plan });
+      return json(req, { subscription: updated });
     }
 
     if (action === "change") {

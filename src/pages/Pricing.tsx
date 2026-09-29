@@ -3,7 +3,7 @@ import { Check, Loader2 } from "lucide-react";
 import { BillingHeader } from "@/components/BillingHeader";
 import { Button } from "@/components/ui/button";
 import { useSubscription, type PlanName } from "@/hooks/useSubscription";
-import { callBilling, openSubscriptionCheckout } from "@/lib/billing";
+import { openSubscriptionCheckout } from "@/lib/billing";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -17,32 +17,20 @@ export default function Pricing() {
     if (plan === "free") return;
     setWorkingPlan(plan);
     try {
-      if (subscription?.status === "active" && subscription.plan !== "free") {
-        await callBilling("change", plan);
-        await refresh();
-        toast.success(`${plan === "pro" ? "Pro" : "Plus"} is active.`);
-        navigate("/billing");
-        return;
-      }
-      await openSubscriptionCheckout(plan, () => {
+      await openSubscriptionCheckout(plan as "plus" | "pro", async (verification) => {
         setConfirming(true);
         toast.info("Payment received. Confirming your subscription…");
-        let attempts = 0;
-        const timer = window.setInterval(async () => {
-          attempts += 1;
-          const result = await refresh();
-          const state = result.data?.subscription;
-          if (state?.status === "active") {
-            window.clearInterval(timer);
-            setConfirming(false);
-            toast.success(`${state.plan === "pro" ? "Pro" : "Plus"} is active.`);
-            navigate("/billing");
-          } else if (attempts >= 20) {
-            window.clearInterval(timer);
-            setConfirming(false);
-            toast.info("Confirmation is taking longer than usual. Check Billing shortly.");
-          }
-        }, 3000);
+        try {
+          const result = await verification;
+          await refresh();
+          const state = result?.subscription;
+          toast.success(`${state?.plan === "pro" ? "Pro" : "Plus"} is active.`);
+          navigate("/billing");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not confirm payment. Check Billing shortly.");
+        } finally {
+          setConfirming(false);
+        }
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Checkout could not start");

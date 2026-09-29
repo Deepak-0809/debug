@@ -7,8 +7,8 @@ declare global {
   }
 }
 
-export async function callBilling(action: string, plan?: PlanName) {
-  const { data, error } = await supabase.functions.invoke("subscription-api", { body: { action, plan } });
+export async function callBilling(action: string, plan?: PlanName, extra: Record<string, string> = {}) {
+  const { data, error } = await supabase.functions.invoke("subscription-api", { body: { action, plan, ...extra } });
   if (error) {
     let message = "Billing request failed. Please try again.";
     try {
@@ -32,7 +32,7 @@ async function loadCheckout() {
   });
 }
 
-export async function openSubscriptionCheckout(plan: "plus" | "pro", onSubmitted: () => void) {
+export async function openSubscriptionCheckout(plan: "plus" | "pro", onSubmitted: (result: Promise<any>) => void) {
   const checkout = await callBilling("create", plan);
   await loadCheckout();
   if (!window.Razorpay) throw new Error("Secure checkout is unavailable");
@@ -44,7 +44,12 @@ export async function openSubscriptionCheckout(plan: "plus" | "pro", onSubmitted
     name: "DebugCP",
     description: `${checkout.name} plan — 1 month`,
     theme: { color: "hsl(var(--primary))" },
-    handler: onSubmitted,
+    handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
+      onSubmitted(callBilling("verify", plan, {
+        orderId: response.razorpay_order_id,
+        paymentId: response.razorpay_payment_id,
+        signature: response.razorpay_signature,
+      })),
     modal: { ondismiss: () => undefined },
   }).open();
 }
