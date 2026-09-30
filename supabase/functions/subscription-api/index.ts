@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, unauthorizedResponse, validateAuth } from "../_shared/auth.ts";
 import { createAdminClient } from "../_shared/admin.ts";
-import { isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
+import { getRazorpayPlanId, isPaidPlan, PLAN_CONFIG, publicPlanConfig } from "../_shared/plan-config.ts";
 import { getPublicRazorpayKey, razorpayRequest, verifyPaymentSignature } from "../_shared/razorpay.ts";
 
 function json(req: Request, body: unknown, status = 200) {
@@ -122,12 +122,17 @@ serve(async (req) => {
       return json(req, { payments: data ?? [] });
     }
 
+    const isRecurring = typeof initialized?.razorpay_subscription_id === "string" && initialized.razorpay_subscription_id.startsWith("sub_");
+
     if (action === "change") {
       if (!isPaidPlan(body?.plan)) return json(req, { error: "Choose Plus or Pro." }, 400);
       if (!initialized?.razorpay_subscription_id || initialized?.status !== "active") {
         return json(req, { error: "No active subscription is available to change." }, 409);
       }
       if (initialized.plan === body.plan) return json(req, { subscription: initialized });
+      if (!isRecurring) {
+        return json(req, { error: "To change plans, buy the new plan from the Plans page." }, 409);
+      }
       const changed = await razorpayRequest(`/subscriptions/${encodeURIComponent(initialized.razorpay_subscription_id)}`, "PATCH", {
         plan_id: getRazorpayPlanId(body.plan),
         quantity: 1,
@@ -159,10 +164,14 @@ serve(async (req) => {
       if (!initialized?.razorpay_subscription_id || !["active", "past_due"].includes(initialized?.status)) {
         return json(req, { error: "No active subscription is available to cancel." }, 409);
       }
-      await razorpayRequest(`/subscriptions/${encodeURIComponent(initialized.razorpay_subscription_id)}/cancel`, "POST", {
-        cancel_at_cycle_end: 1,
-      });
-      console.info("subscription cancellation requested", { userId: auth.userId });
+      // One-time monthly orders never auto-renew: nothing to cancel at Razorpay,
+      // the plan simply returns to Free after cycle_end (expire_subscription_if_due).
+      if (isRecurring) {
+        await razorpayRequest(`/subscriptions/${encodeURIComponent(initialized.razorpay_subscription_id)}/cancel`, "POST", {
+          cancel_at_cycle_end: 1,
+        });
+      }
+      console.info("subscription cancellation requested", { userId: auth.userId, recurring: isRecurring });
       return json(req, { cancellationScheduled: true, cycleEnd: initialized.cycle_end });
     }
 
