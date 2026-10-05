@@ -58,10 +58,10 @@ export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResu
 
       if (id === "lovable") {
         logUsage({ ...base, provider_used: id, model, success: false, failover_count: failovers, error_code: lastCode });
-        if (status === 429) throw new AIRouterError("AI is busy, try again shortly", 429, "rate_limited");
-        if (status === 402) throw new AIRouterError("AI credits exhausted", 402, "credits_exhausted");
+        if (status === 429) throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 429, "rate_limited");
+        if (status === 402) throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 402, "credits_exhausted");
         if (status === 400) throw new AIRouterError("Invalid AI request", 400, "bad_request");
-        throw new AIRouterError("AI service is temporarily unavailable", 502, lastCode);
+        throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 502, lastCode);
       }
       // Non-final provider failed (bad key, no credits, rate limit, 5xx, or a provider-specific 400):
       // fall through. If the request itself is invalid, Lovable AI returns the 400 at the end.
@@ -73,20 +73,20 @@ export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResu
       console.warn(`[ai-router] ✗ ${id} ${lastCode}, failing over`);
       if (id === "lovable") {
         logUsage({ ...base, provider_used: id, model, success: false, failover_count: failovers, error_code: lastCode });
-        throw new AIRouterError("AI service is temporarily unavailable", 502, lastCode);
+        throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 502, lastCode);
       }
     }
     failovers++;
   }
 
   logUsage({ ...base, provider_used: null, model: null, success: false, failover_count: failovers, error_code: lastCode });
-  throw new AIRouterError("AI service is not configured", 500, lastCode);
+  throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 500, lastCode);
 }
 
 /** Standard JSON error response for AI router failures. */
 export function aiErrorResponse(e: unknown, headers: Record<string, string>): Response | null {
   if (!(e instanceof AIRouterError)) return null;
-  return new Response(JSON.stringify({ error: e.message, code: e.code }), {
+  return new Response(JSON.stringify({ error: e.message, code: e.code, ai_failure: e.code !== "bad_request" }), {
     status: e.status, headers: { ...headers, "Content-Type": "application/json" },
   });
 }
