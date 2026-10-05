@@ -47,7 +47,7 @@ export default function Privacy() {
           <li><strong>Debug runs, test cases and assistant chat messages:</strong> deleted automatically 3 months after the run was created. A cleanup job runs every day; chat messages are deleted together with their run.</li>
           <li><strong>Account and profile:</strong> kept while your account exists.</li>
           <li><strong>Payment records:</strong> kept for as long as needed for accounting, tax and dispute purposes, even after an account is closed.</li>
-          <li><strong>Plan, usage and AI request logs, rate-limit records:</strong> kept while your account exists, for billing accuracy and abuse prevention.</li>
+          <li><strong>Plan, usage and AI request logs, rate-limit records:</strong> kept while your account exists, for billing accuracy and abuse prevention, and deleted when your account is deleted.</li>
         </ul>
         <p>Deleted data may remain in backups for a limited period before being overwritten.</p>
       </Section>
@@ -67,7 +67,7 @@ export default function Privacy() {
       <Section title="Your rights">
         <p>
           You can view your runs and payments in the app. You can ask us to access, correct, or delete your account and its data by emailing{" "}
-          <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We respond within 30 days. Deleting your account removes your profile, runs, test cases and chat messages; payment records may be retained as described above.
+          <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We respond within 30 days. Deleting your account removes your profile, runs, test cases, chat messages and usage logs; payment records may be retained as described above.
         </p>
       </Section>
 

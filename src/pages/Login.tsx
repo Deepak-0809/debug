@@ -131,8 +131,9 @@ export default function Login() {
                 </Link>
               </div>
               <p className="text-center text-xs text-muted-foreground">
-                <Link to="/terms" className="hover:underline">Terms</Link> ·{" "}
-                <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+                By continuing (including with Google) you agree to our{" "}
+                <Link to="/terms" className="text-primary hover:underline">Terms</Link> and{" "}
+                <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
               </p>
             </CardContent>
           </Card>
