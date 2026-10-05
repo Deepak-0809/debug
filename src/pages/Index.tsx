@@ -26,6 +26,14 @@ const sanitizeCode = (code: string): string => {
   return cleaned;
 };
 
+async function functionError(error: unknown, fallback: string): Promise<Error> {
+  try {
+    const body = await (error as { context?: Response }).context?.json();
+    if (body?.error) return new Error(body.error);
+  } catch { /* use fallback */ }
+  return new Error(fallback);
+}
+
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
