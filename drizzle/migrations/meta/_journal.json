@@ -22,6 +22,13 @@
       "when": 1791216230242,
       "tag": "0002_align_run_retention_to_90_days",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791216513927,
+      "tag": "0003_enforce_account_data_cleanup",
+      "breakpoints": true
     }
   ]
 }

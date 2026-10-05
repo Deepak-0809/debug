@@ -39,9 +39,9 @@ export default function Terms() {
 
       <Section title="Plans and payments">
         <ul>
-          <li>Free and paid plans have the limits shown on the Plans page. Only runs that finish are counted.</li>
+          <li>Free and paid plans have the limits shown on the Plans page. A failing-test search is counted when test-case generation succeeds; retries within that search are not counted again. A single test is counted when its execution result is returned. AI service failures during later test generation or diagnosis return the search allowance.</li>
           <li>Paid plans are one-time payments for 30 days, processed by Razorpay in INR. They do not renew automatically.</li>
-          <li>When a paid period ends, the account returns to the Free plan.</li>
+          <li>When a paid period ends, the account returns to the Free plan. Expiry is checked when you open the app or start a run; the current expiry check allows up to one extra day after the end date.</li>
           <li>Paid plans don't renew automatically, so there is nothing to cancel. Your plan stays active until its end date.</li>
           <li>Payments are generally non-refundable, except where required by law or in case of a billing error. Contact <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a> if you were charged incorrectly.</li>
         </ul>
