@@ -245,7 +245,7 @@ serve(async (req) => {
 
     let parsed;
     try { parsed = extractJsonFromResponse(content); } catch {
-      console.error("Failed to parse AI response:", content.substring(0, 300));
+      console.error("Failed to parse AI response: invalid JSON");
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: content.substring(0, 500) }), {
         status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });

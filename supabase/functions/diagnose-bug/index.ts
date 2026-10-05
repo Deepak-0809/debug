@@ -155,7 +155,7 @@ serve(async (req) => {
     try {
       parsed = JSON.parse(jsonContent);
     } catch {
-      console.error("AI returned invalid JSON:", jsonContent.substring(0, 500));
+      console.error("AI returned invalid JSON");
       return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent.substring(0, 1000) }), {
         status: 422, headers: { ...headers, "Content-Type": "application/json" },
       });

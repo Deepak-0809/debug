@@ -27,7 +27,7 @@ export default function Privacy() {
           <li>To show your run history and chat history.</li>
           <li>To enforce plan limits, process payments and prevent abuse.</li>
         </ul>
-        <p>We do not use your code to train AI models.</p>
+        <p>Debug does not train AI models on your code. Third-party AI services process submissions under their own terms and privacy policies; their retention and model-improvement practices depend on the provider and account settings. Do not submit confidential code or personal information.</p>
       </Section>
 
       <Section title="Who we share data with">
@@ -49,7 +49,7 @@ export default function Privacy() {
           <li><strong>Payment records:</strong> kept for as long as needed for accounting, tax and dispute purposes, even after an account is closed.</li>
           <li><strong>Plan, usage and AI request logs, rate-limit records:</strong> kept while your account exists, for billing accuracy and abuse prevention, and deleted when your account is deleted.</li>
         </ul>
-        <p>Deleted data may remain in backups for a limited period before being overwritten.</p>
+        <p>This retention period covers Debug's app database. Hosting backups and third-party services may retain copies under their own retention policies; deleting a run in Debug does not guarantee immediate deletion from those systems.</p>
       </Section>
 
       <Section title="Cookies and local storage">
@@ -67,7 +67,7 @@ export default function Privacy() {
       <Section title="Your rights">
         <p>
           You can view your runs and payments in the app. You can ask us to access, correct, or delete your account and its data by emailing{" "}
-          <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We respond within 30 days. Deleting your account removes your profile, runs, test cases, chat messages and usage logs; payment records may be retained as described above.
+          <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We respond within 30 days. Account deletion is handled by our team, not automatically by sending an email, and we may need to verify that you own the account. Deleting your account removes your profile, runs, test cases, chat messages, plan records, usage logs, AI request logs and rate-limit records; payment records may be retained as described above.
         </p>
       </Section>
 

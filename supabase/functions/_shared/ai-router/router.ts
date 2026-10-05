@@ -52,8 +52,9 @@ export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResu
       }
 
       const status = resp.status;
-      const errBody = await resp.text().catch(() => "");
-      console.warn(`[ai-router] ${id} HTTP ${status}: ${errBody.slice(0, 300)}`);
+      // Provider error bodies can echo submitted code. Never persist their contents.
+      await resp.body?.cancel().catch(() => undefined);
+      console.warn(`[ai-router] ${id} HTTP ${status}`);
       lastCode = `http_${status}`;
 
       if (id === "lovable") {
