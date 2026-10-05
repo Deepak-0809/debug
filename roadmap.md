@@ -1,5 +1,10 @@
 # Subscription rollout
 
+## Privacy and Terms verification
+- [x] Confirm both legal pages show the last-updated date and clarify cancellation
+- [x] Align retention wording and cleanup to 90 days, including signup consent
+- [ ] Verify live cleanup, cascade deletion, AI log fields and rendered legal pages
+
 - [x] Add secure subscription, usage, webhook, and audit database schema
 - [x] Add atomic quota enforcement across paid debug branches
 - [x] Add Razorpay billing and verified idempotent webhook functions

@@ -44,7 +44,7 @@ export default function Privacy() {
 
       <Section title="How long we keep it">
         <ul>
-          <li><strong>Debug runs, test cases and assistant chat messages:</strong> deleted automatically 3 months after the run was created. A cleanup job runs every day; chat messages are deleted together with their run.</li>
+          <li><strong>Debug runs, test cases and assistant chat messages:</strong> a daily cleanup deletes runs older than 90 days, measured from when the run was created. Their test cases and chat messages are deleted together with the run. Deletion happens at the next daily cleanup after the 90-day period.</li>
           <li><strong>Account and profile:</strong> kept while your account exists.</li>
           <li><strong>Payment records:</strong> kept for as long as needed for accounting, tax and dispute purposes, even after an account is closed.</li>
           <li><strong>Plan, usage and AI request logs, rate-limit records:</strong> kept while your account exists, for billing accuracy and abuse prevention, and deleted when your account is deleted.</li>

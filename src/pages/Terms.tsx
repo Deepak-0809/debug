@@ -23,7 +23,7 @@ export default function Terms() {
           <li>You keep ownership of the code you submit.</li>
           <li>You allow us to process it (send it to AI providers and the code-execution service) only to provide the service.</li>
           <li>Only submit code you have the right to share. Do not submit secrets, passwords or personal data inside your code.</li>
-          <li>Runs and their chats are deleted automatically after 3 months, so keep your own copies of anything important.</li>
+          <li>Runs, their test cases and chats are deleted by a daily cleanup once the run is older than 90 days, so keep your own copies of anything important.</li>
         </ul>
       </Section>
 
@@ -42,7 +42,7 @@ export default function Terms() {
           <li>Free and paid plans have the limits shown on the Plans page. Only runs that finish are counted.</li>
           <li>Paid plans are one-time payments for 30 days, processed by Razorpay in INR. They do not renew automatically.</li>
           <li>When a paid period ends, the account returns to the Free plan.</li>
-          <li>Cancelling stops nothing early — your plan stays active until its end date.</li>
+          <li>Paid plans don't renew automatically, so there is nothing to cancel. Your plan stays active until its end date.</li>
           <li>Payments are generally non-refundable, except where required by law or in case of a billing error. Contact <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a> if you were charged incorrectly.</li>
         </ul>
       </Section>

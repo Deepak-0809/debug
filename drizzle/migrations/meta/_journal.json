@@ -15,6 +15,13 @@
       "when": 1791215498018,
       "tag": "0001_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791216230242,
+      "tag": "0002_align_run_retention_to_90_days",
+      "breakpoints": true
     }
   ]
 }

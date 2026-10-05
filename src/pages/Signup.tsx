@@ -139,7 +139,7 @@ export default function Signup() {
                 <input id="agree" type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-primary" />
                 <span>
                   I agree to the <Link to="/terms" target="_blank" className="text-primary hover:underline">Terms of Service</Link> and{" "}
-                  <Link to="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>. I understand my code is sent to AI and code-execution services to find bugs, and my runs and chats are deleted after 3 months.
+                  <Link to="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>. I understand my code is sent to AI and code-execution services to find bugs, and a daily cleanup deletes my runs, test cases and chats once the run is older than 90 days.
                 </span>
               </label>
               <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={!agreed}>
