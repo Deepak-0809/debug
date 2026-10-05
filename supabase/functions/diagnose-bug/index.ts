@@ -3,7 +3,8 @@ import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/a
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { validateCode, validateLanguage, validationErrorResponse } from "../_shared/validation.ts";
 import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
-import { unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { refundQuota, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { AIRouterError } from "../_shared/ai-failover.ts";
 
 const SYSTEM_PROMPT = `You are a sharp, no-nonsense competitive programming debugger. You analyze code bugs and give DIRECT, CONCISE answers. No fluff.
 
@@ -77,6 +78,7 @@ serve(async (req) => {
   const allowed = await checkRateLimit(auth.userId, "diagnose-bug");
   if (!allowed) return rateLimitResponse("diagnose-bug");
 
+  let refundKey: unknown = null;
   try {
     const {
       buggyCode, correctCode, language,
@@ -89,6 +91,7 @@ serve(async (req) => {
     ].filter(Boolean);
     if (errors.length > 0) return validationErrorResponse(errors as any);
     if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
+    refundKey = actionKey;
 
     const safeLang = validateLanguage(language);
 
@@ -179,6 +182,8 @@ serve(async (req) => {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
+    // AI failure after the run was counted: give the run back.
+    if (e instanceof AIRouterError && e.code !== "bad_request" && refundKey) await refundQuota(auth.userId, refundKey);
     const aiErr = aiErrorResponse(e, headers);
     if (aiErr) return aiErr;
     console.error("diagnose-bug error:", e);
