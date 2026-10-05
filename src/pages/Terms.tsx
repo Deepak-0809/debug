@@ -43,7 +43,7 @@ export default function Terms() {
           <li>Paid plans are one-time payments for 30 days, processed by Razorpay in INR. They do not renew automatically.</li>
           <li>When a paid period ends, the account returns to the Free plan.</li>
           <li>Cancelling stops nothing early — your plan stays active until its end date.</li>
-          <li>Payments are generally non-refundable, except where required by law or in case of a billing error. Contact us if you were charged incorrectly.</li>
+          <li>Payments are generally non-refundable, except where required by law or in case of a billing error. Contact <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a> if you were charged incorrectly.</li>
         </ul>
       </Section>
 
@@ -56,7 +56,7 @@ export default function Terms() {
       </Section>
 
       <Section title="Ending your account">
-        <p>You can stop using the service at any time and ask us to delete your account. We may suspend accounts that break these terms.</p>
+        <p>You can stop using the service at any time and ask us to delete your account by emailing <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We may suspend accounts that break these terms.</p>
       </Section>
 
       <Section title="Governing law">

@@ -66,8 +66,8 @@ export default function Privacy() {
 
       <Section title="Your rights">
         <p>
-          You can view your runs and payments in the app. You can ask us to access, correct, or delete your account and its data by contacting us
-          through the contact details on this site. Deleting your account removes your profile, runs, test cases and chat messages; payment records may be retained as described above.
+          You can view your runs and payments in the app. You can ask us to access, correct, or delete your account and its data by emailing{" "}
+          <a href="mailto:founders@debugcp.me" className="text-primary hover:underline">founders@debugcp.me</a>. We respond within 30 days. Deleting your account removes your profile, runs, test cases and chat messages; payment records may be retained as described above.
         </p>
       </Section>
 
