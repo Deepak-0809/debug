@@ -206,10 +206,11 @@ serve(async (req) => {
   try {
     const { schema, runId, retryRound = 0, actionKey } = await req.json();
     if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
-    refundKey = actionKey;
-
     // Validate retryRound
     const safeRetryRound = typeof retryRound === "number" ? Math.min(Math.max(0, Math.floor(retryRound)), 10) : 0;
+    // Only round 0 charges the run. Optional retry rounds must never refund it:
+    // the pipeline continues to diagnosis after a failed retry, so the run was used.
+    if (safeRetryRound === 0) refundKey = actionKey;
 
     if (!schema || typeof schema !== "object") {
       return new Response(JSON.stringify({ error: "Invalid or missing schema" }), {
