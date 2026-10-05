@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
@@ -18,10 +18,18 @@ export function Section({ title, children }: { title: string; children: ReactNod
 
 export default function LegalLayout({ title, children }: { title: string; children: ReactNode }) {
   const navigate = useNavigate();
+  // On a fresh load (new tab or direct URL) there is no history to go back to,
+  // so the button takes the user to the app's start page instead.
+  const hasHistory = useLocation().key !== "default";
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => (hasHistory ? navigate(-1) : navigate("/"))}
+          className="gap-1"
+        >
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <header className="space-y-1">
