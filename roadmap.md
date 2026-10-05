@@ -1,6 +1,7 @@
 # Subscription rollout
 
 ## Privacy and Terms verification
+- [ ] Audit policy promises against current data access, deletion, signup and usage handling; correct mismatches
 - [x] Confirm both legal pages show the last-updated date and clarify cancellation
 - [x] Align retention wording and cleanup to 90 days, including signup consent
 - [x] Verify live cleanup, cascade deletion, AI log fields and rendered legal pages
