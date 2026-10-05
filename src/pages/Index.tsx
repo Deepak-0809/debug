@@ -184,7 +184,14 @@ const Index = () => {
         retryRound++;
         setProgressStep(`Step 4/5: No bug found yet — generating harder test batch ${retryRound}/${MAX_RETRY_ROUNDS}...`);
         const { data: extraTestData, error: extraTestError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, retryRound, actionKey } });
-        if (extraTestError || extraTestData?.error || !extraTestData?.result?.test_cases?.length) break;
+        if (extraTestError) {
+          // AI capacity failure (limits/credits): the run was given back, so stop here with the reason.
+          let body: { error?: string; refunded?: boolean } | null = null;
+          try { body = await (extraTestError as { context?: Response }).context?.json(); } catch { /* ignore */ }
+          if (body?.refunded) throw new Error(body.error || "Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.");
+          break;
+        }
+        if (extraTestData?.error || !extraTestData?.result?.test_cases?.length) break;
 
         const extraCount = extraTestData.result.test_cases.length;
         let extraTestCases = extraTestData.result.test_cases.map((tc: any) => ({ id: tc.id || null, input: tc.input }));

@@ -203,14 +203,14 @@ serve(async (req) => {
   if (!allowed) return rateLimitResponse("generate-test-cases");
 
   let refundKey: unknown = null;
+  let isRetry = false;
   try {
     const { schema, runId, retryRound = 0, actionKey } = await req.json();
     if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
     // Validate retryRound
     const safeRetryRound = typeof retryRound === "number" ? Math.min(Math.max(0, Math.floor(retryRound)), 10) : 0;
-    // Only round 0 charges the run. Optional retry rounds must never refund it:
-    // the pipeline continues to diagnosis after a failed retry, so the run was used.
-    if (safeRetryRound === 0) refundKey = actionKey;
+    refundKey = actionKey;
+    isRetry = safeRetryRound > 0;
 
     if (!schema || typeof schema !== "object") {
       return new Response(JSON.stringify({ error: "Invalid or missing schema" }), {
@@ -274,7 +274,20 @@ serve(async (req) => {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
-    if (e instanceof AIRouterError && e.code !== "bad_request" && refundKey) await refundQuota(auth.userId, refundKey);
+    if (e instanceof AIRouterError && e.code !== "bad_request" && refundKey) {
+      // Round 0: nothing charged yet, refund is a no-op. Retry rounds: give the run back only on
+      // real AI outages (limits, credits, provider down). The client then stops the pipeline,
+      // so no diagnosis is delivered for a refunded run. A garbled batch just ends retries; the run stays counted.
+      const outage = !["invalid_response", "empty_response"].includes(e.code);
+      if (!isRetry || outage) {
+        const refunded = await refundQuota(auth.userId, refundKey);
+        if (isRetry) {
+          return new Response(JSON.stringify({ error: e.message, code: e.code, ai_failure: true, refunded }), {
+            status: e.status, headers: { ...headers, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
     const aiErr = aiErrorResponse(e, headers);
     if (aiErr) return aiErr;
     console.error("generate-test-cases error:", e);
