@@ -130,6 +130,10 @@ export default function Login() {
                   <Button variant="outline" className="mt-2 w-full">Create Account</Button>
                 </Link>
               </div>
+              <p className="text-center text-xs text-muted-foreground">
+                <Link to="/terms" className="hover:underline">Terms</Link> ·{" "}
+                <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+              </p>
             </CardContent>
           </Card>
         </div>
