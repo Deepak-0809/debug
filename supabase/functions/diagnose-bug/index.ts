@@ -141,9 +141,7 @@ serve(async (req) => {
     const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
-      return new Response(JSON.stringify({ error: "No response from AI" }), {
-        status: 500, headers: { ...headers, "Content-Type": "application/json" },
-      });
+      throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 502, "empty_response");
     }
 
     let jsonContent = content.trim();
@@ -156,9 +154,7 @@ serve(async (req) => {
       parsed = JSON.parse(jsonContent);
     } catch {
       console.error("AI returned invalid JSON");
-      return new Response(JSON.stringify({ error: "AI returned invalid JSON", raw: jsonContent.substring(0, 1000) }), {
-        status: 422, headers: { ...headers, "Content-Type": "application/json" },
-      });
+      throw new AIRouterError("Sorry, there is a problem with the AI right now. Please try again after some time. This run was not counted.", 422, "invalid_response");
     }
 
     if (!parsed.scenario) {
