@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, validateAuth, unauthorizedResponse } from "../_shared/auth.ts";
 import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limiter.ts";
 import { callAIWithFailover, aiErrorResponse } from "../_shared/ai-failover.ts";
-import { chargeQuota, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { chargeQuota, refundQuota, unmeteredResponse, verifyQuotaAction } from "../_shared/quota.ts";
+import { AIRouterError } from "../_shared/ai-failover.ts";
 
 function getSystemPrompt(retryRound: number): string {
   const base = `You are an expert competitive programming stress tester. Your job is NOT to generate random test cases — your job is to BREAK code and expose bugs.
@@ -201,9 +202,11 @@ serve(async (req) => {
   const allowed = await checkRateLimit(auth.userId, "generate-test-cases");
   if (!allowed) return rateLimitResponse("generate-test-cases");
 
+  let refundKey: unknown = null;
   try {
     const { schema, runId, retryRound = 0, actionKey } = await req.json();
     if (!(await verifyQuotaAction(auth.userId, actionKey))) return unmeteredResponse(req);
+    refundKey = actionKey;
 
     // Validate retryRound
     const safeRetryRound = typeof retryRound === "number" ? Math.min(Math.max(0, Math.floor(retryRound)), 10) : 0;
@@ -276,6 +279,7 @@ serve(async (req) => {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });
   } catch (e) {
+    if (e instanceof AIRouterError && e.code !== "bad_request" && refundKey) await refundQuota(auth.userId, refundKey);
     const aiErr = aiErrorResponse(e, headers);
     if (aiErr) return aiErr;
     console.error("generate-test-cases error:", e);
