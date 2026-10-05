@@ -26,6 +26,14 @@ const sanitizeCode = (code: string): string => {
   return cleaned;
 };
 
+async function functionError(error: unknown, fallback: string): Promise<Error> {
+  try {
+    const body = await (error as { context?: Response }).context?.json();
+    if (body?.error) return new Error(body.error);
+  } catch { /* use fallback */ }
+  return new Error(fallback);
+}
+
 const Index = () => {
   const { user, username, signOut } = useAuth();
   const navigate = useNavigate();
@@ -71,7 +79,7 @@ const Index = () => {
     try {
       setProgressStep("Step 1/5: Analyzing problem structure...");
       const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo, actionKey, actionType: "full_pipeline" } });
-      if (analysisError) throw new Error(analysisError.message || "Analysis failed");
+      if (analysisError) throw await functionError(analysisError, "Analysis failed");
       if (analysisData?.error) {
         if (analysisData.code === "RUN_LIMIT_REACHED") navigate("/pricing");
         throw new Error(analysisData.error);
@@ -93,7 +101,7 @@ const Index = () => {
         const { data: wrapData, error: wrapError } = await supabase.functions.invoke("wrap-class-code", {
           body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLanguage, actionKey },
         });
-        if (wrapError) throw new Error(wrapError.message || "Code wrapping failed");
+        if (wrapError) throw await functionError(wrapError, "Code wrapping failed");
         if (wrapData?.error) throw new Error(wrapData.error);
         if (!wrapData?.wrappedBuggyCode || !wrapData?.wrappedCorrectCode) {
           throw new Error("Failed to generate executable wrappers for class-based code");
@@ -116,7 +124,7 @@ const Index = () => {
 
       setProgressStep("Step 2/5: Checking for syntax & runtime errors...");
       const { data: syntaxData, error: syntaxError } = await supabase.functions.invoke("check-syntax", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, actionKey } });
-      if (syntaxError) throw new Error(syntaxError.message || "Syntax check failed");
+      if (syntaxError) throw await functionError(syntaxError, "Syntax check failed");
       if (syntaxData?.error) throw new Error(syntaxData.error);
       const syntaxResult = syntaxData?.result;
 
@@ -131,7 +139,7 @@ const Index = () => {
         toast.warning(`Found ${syntaxResult.errors?.length || 0} syntax/runtime error(s).`);
         setProgressStep("Step 5/5: AI diagnosing syntax errors...");
         const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: syntaxResult, executionResults: null, runId, actionKey } });
-        if (diagError) throw new Error(diagError.message || "Diagnosis failed");
+        if (diagError) throw await functionError(diagError, "Diagnosis failed");
         if (diagData?.error) throw new Error(diagData.error);
         if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
           setDiagnosis({ scenario: "all_correct", verdict: "Error: AI returned no diagnosis. Please try again.", failing_test: null, issues: [], root_cause: null, improvements: [] });
@@ -145,7 +153,7 @@ const Index = () => {
 
       setProgressStep("Step 3/5: Generating test cases...");
       const { data: testData, error: testError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, actionKey } });
-      if (testError) throw new Error(testError.message || "Test case generation failed");
+      if (testError) throw await functionError(testError, "Test case generation failed");
       if (testData?.error) throw new Error(testData.error);
       // Step 3 completed: the backend counts this as one run now.
       void refreshSubscription();
@@ -162,7 +170,7 @@ const Index = () => {
 
       // Use wrapped code for execution (same as original for non-class-based)
       let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: storedTestCases, runId, actionKey, actionType: "full_pipeline" } });
-      if (execError) throw new Error(execError.message || "Code execution failed");
+      if (execError) throw await functionError(execError, "Code execution failed");
       if (execData?.error) throw new Error(execData.error);
 
       // If no failing test found, retry with 4 more batches of harder test cases
@@ -217,7 +225,7 @@ const Index = () => {
             syntaxErrors: null, executionResults: execData, compilationError: execData.message, runId, actionKey,
           },
         });
-        if (diagError) throw new Error(diagError.message || "Diagnosis failed");
+        if (diagError) throw await functionError(diagError, "Diagnosis failed");
         if (diagData?.error) throw new Error(diagData.error);
         if (diagData?.diagnosis?.scenario) {
           setDiagnosis(diagData.diagnosis);
@@ -238,7 +246,7 @@ const Index = () => {
 
       setProgressStep("Step 5/5: AI diagnosing...");
       const { data: diagData, error: diagError } = await supabase.functions.invoke("diagnose-bug", { body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, language: detectedLanguage, syntaxErrors: null, executionResults: execData, runId, actionKey } });
-      if (diagError) throw new Error(diagError.message || "Diagnosis failed");
+      if (diagError) throw await functionError(diagError, "Diagnosis failed");
       if (diagData?.error) throw new Error(diagData.error);
       if (!diagData?.diagnosis || !diagData.diagnosis.scenario) {
         setDiagnosis({ scenario: "all_correct", verdict: "Error: AI returned no diagnosis. Please try again.", failing_test: null, issues: [], root_cause: null, improvements: [] });
@@ -299,14 +307,14 @@ const Index = () => {
         const { data: analysisData, error: analysisError } = await supabase.functions.invoke("analyze-problem", {
           body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, additionalInfo: "", actionKey, actionType: "single_test" },
         });
-        if (analysisError) throw new Error(analysisError.message || "Analysis failed");
+        if (analysisError) throw await functionError(analysisError, "Analysis failed");
         if (analysisData?.error) throw new Error(analysisData.error);
 
         const schema = analysisData?.schema;
         const { data: wrapData, error: wrapError } = await supabase.functions.invoke("wrap-class-code", {
           body: { buggyCode: cleanBuggy, correctCode: cleanCorrect, schema, language: detectedLang, actionKey },
         });
-        if (wrapError) throw new Error(wrapError.message || "Code wrapping failed");
+        if (wrapError) throw await functionError(wrapError, "Code wrapping failed");
         if (wrapData?.error) throw new Error(wrapData.error);
         if (wrapData?.wrappedBuggyCode) execBuggy = wrapData.wrappedBuggyCode;
         if (wrapData?.wrappedCorrectCode) execCorrect = wrapData.wrappedCorrectCode;
@@ -315,7 +323,7 @@ const Index = () => {
       const testCases = [{ id: null, input: testInput }];
       toast.info(`Running your test case (${detectedLang})...`);
       const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null, actionKey, actionType: "single_test" } });
-      if (execError) throw new Error(execError.message || "Execution failed");
+      if (execError) throw await functionError(execError, "Execution failed");
       if (execData?.error) {
         if (execData.code === "RUN_LIMIT_REACHED") navigate("/pricing");
         throw new Error(execData.error);

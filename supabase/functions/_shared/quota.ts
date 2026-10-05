@@ -81,3 +81,12 @@ export function unmeteredResponse(req: Request) {
     code: "INVALID_ACTION_KEY",
   }), { status: 403, headers: { ...headers, "Content-Type": "application/json" } });
 }
+// Give a counted run back when the AI fails after the run was counted.
+export async function refundQuota(userId: string, actionKeyValue: unknown) {
+  const actionKey = parseActionKey(actionKeyValue);
+  if (!actionKey) return false;
+  const { data, error } = await createAdminClient().rpc("refund_run_quota", { _user_id: userId, _action_key: actionKey });
+  if (error) { console.error("quota refund failed", { userId, message: error.message }); return false; }
+  console.info("quota refund", { userId, refunded: data });
+  return data === true;
+}

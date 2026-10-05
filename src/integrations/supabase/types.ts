@@ -523,6 +523,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      refund_run_quota: {
+        Args: { _action_key: string; _user_id: string }
+        Returns: boolean
+      }
       reserve_run_quota: {
         Args: { _action_key: string; _action_type: string; _user_id: string }
         Returns: Json
