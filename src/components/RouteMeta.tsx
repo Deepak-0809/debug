@@ -21,9 +21,9 @@ const META: Record<string, { title: string; description: string }> = {
 export default function RouteMeta() {
   const { pathname } = useLocation();
   const path = pathname.replace(/\/+$/, "") || "/";
-  const meta = META[path] ?? (path.startsWith("/history/")
-    ? { title: "Run Detail – DebugCP", description: "Details of a DebugCP debugging run." }
-    : { title: "Page Not Found – DebugCP", description: "This page does not exist on DebugCP." });
+  // Individual run pages own their head tags (RunMeta in HistoryDetail).
+  if (path.startsWith("/history/")) return null;
+  const meta = META[path] ?? { title: "Page Not Found – DebugCP", description: "This page does not exist on DebugCP." };
   const url = `${BASE_URL}${path === "/" ? "/" : path}`;
   return (
     <Helmet>
