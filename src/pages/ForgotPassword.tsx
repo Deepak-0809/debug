@@ -34,7 +34,7 @@ export default function ForgotPassword() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <Bug className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">Reset Password</CardTitle>
+          <h1 className="text-2xl font-semibold leading-none tracking-tight text-foreground">Reset Password</h1>
           <CardDescription className="text-muted-foreground">
             We'll send you a reset link
           </CardDescription>

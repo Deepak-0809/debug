@@ -94,7 +94,7 @@ export default function About() {
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" aria-label="Back to home" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
@@ -107,6 +107,7 @@ export default function About() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Toggle theme"
               className="h-8 w-8"
               onClick={toggleTheme}
             >
@@ -141,9 +142,9 @@ export default function About() {
 
         {/* How it works */}
         <section className="space-y-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground text-center">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground text-center">
             How It Works
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {steps.map((step, i) => {
               const Icon = step.icon;
@@ -172,9 +173,9 @@ export default function About() {
 
         {/* Features */}
         <section className="space-y-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground text-center">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground text-center">
             Features
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((f, i) => (
               <div
@@ -194,7 +195,7 @@ export default function About() {
 
         {/* CTA */}
         <section className="text-center space-y-4 pb-8">
-          <h3 className="text-xl font-bold">Ready to debug smarter?</h3>
+          <h2 className="text-xl font-bold">Ready to debug smarter?</h2>
           <div className="flex items-center justify-center gap-3">
             <Button onClick={() => navigate("/")} className="gap-2">
               <Bug className="h-4 w-4" /> Start Debugging

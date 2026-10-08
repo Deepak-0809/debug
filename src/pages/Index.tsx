@@ -448,7 +448,7 @@ const Index = () => {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <Bug className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
-          <span className="text-base font-bold text-foreground">Debug</span>
+          <h1 className="text-base font-bold text-foreground">Debug<span className="sr-only"> — AI-Powered Differential Debugger</span></h1>
           <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">Beta</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -463,11 +463,11 @@ const Index = () => {
             <CreditCard className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Billing</span>
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
+          <Button variant="ghost" size="icon" aria-label="Toggle theme" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={toggleTheme}>
             {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </Button>
           <span className="text-xs text-muted-foreground hidden md:inline truncate max-w-[140px] font-medium">@{username || "user"}</span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={signOut}>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Log out" onClick={signOut}>
             <LogOut className="h-3.5 w-3.5" />
           </Button>
         </div>

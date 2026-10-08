@@ -18,6 +18,7 @@ import Pricing from "./pages/Pricing";
 import Billing from "./pages/Billing";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import RouteMeta from "@/components/RouteMeta";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <RouteMeta />
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />

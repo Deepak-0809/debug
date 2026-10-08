@@ -106,7 +106,7 @@ export default function Signup() {
                 <Bug className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Debug</h1>
+                <h1 className="text-3xl font-bold text-foreground">Debug<span className="sr-only"> — AI-Powered Bug Finder for Competitive Programming</span></h1>
                 <p className="text-sm text-muted-foreground">Competitive Programming Bug Finder</p>
               </div>
             </div>
