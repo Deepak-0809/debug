@@ -27,6 +27,7 @@ export default function CopyButton({ text, className = "" }: CopyButtonProps) {
       onClick={handleCopy}
       className={`inline-flex items-center justify-center rounded p-1 transition-colors hover:bg-muted/60 text-muted-foreground hover:text-foreground ${className}`}
       title="Copy to clipboard"
+      aria-label={copied ? "Copied to clipboard" : "Copy to clipboard"}
     >
       {copied ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3" />}
     </button>

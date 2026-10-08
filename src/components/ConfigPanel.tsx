@@ -26,9 +26,9 @@ export default function ConfigPanel({
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Configuration
-        </span>
+        </h2>
       </div>
       <div className="flex flex-col flex-1 p-4">
         <div className="space-y-1.5 flex-1">
