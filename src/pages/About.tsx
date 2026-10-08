@@ -193,6 +193,20 @@ export default function About() {
           </div>
         </section>
 
+        {/* Guide link */}
+        <section className="text-center space-y-3">
+          <p className="text-sm text-muted-foreground">
+            New to AI-assisted debugging? Read{" "}
+            <button
+              onClick={() => navigate("/ai-code-debugger")}
+              className="underline underline-offset-4 text-primary hover:opacity-80"
+            >
+              how differential debugging finds your failing test case
+            </button>
+            .
+          </p>
+        </section>
+
         {/* CTA */}
         <section className="text-center space-y-4 pb-8">
           <h2 className="text-xl font-bold">Ready to debug smarter?</h2>

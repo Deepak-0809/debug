@@ -10,6 +10,7 @@ const META: Record<string, { title: string; description: string }> = {
   "/forgot-password": { title: "Forgot Password – DebugCP", description: "Reset your DebugCP account password." },
   "/reset-password": { title: "Set New Password – DebugCP", description: "Choose a new password for your DebugCP account." },
   "/about": { title: "About DebugCP – AI Code Debugger for Competitive Programming", description: "Learn how DebugCP's AI differential debugging compares buggy and correct code to uncover edge-case failures." },
+  "/ai-code-debugger": { title: "AI Code Debugger: How Differential Debugging Finds Your Failing Test Case – DebugCP", description: "What an AI code debugger does, how differential debugging compares buggy and correct code to surface hidden edge-case failures, and how to use DebugCP on a Wrong Answer." },
   "/history": { title: "Run History – DebugCP", description: "Review your past DebugCP debugging runs, failing test cases, and diagnoses." },
   "/pricing": { title: "Pricing – DebugCP", description: "Compare DebugCP Free, Plus, and Pro plans for AI-powered competitive programming debugging." },
   "/billing": { title: "Billing – DebugCP", description: "Manage your DebugCP plan, usage, and payment history." },
