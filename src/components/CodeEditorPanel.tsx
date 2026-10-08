@@ -41,9 +41,9 @@ export default function CodeEditorPanel({ label, language, value, onChange }: Co
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
-        </span>
+        </h2>
       </div>
       <div className="flex-1 min-h-0">
         <Editor

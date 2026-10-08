@@ -177,9 +177,9 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
           {/* Issues */}
           {diagnosis.issues?.length > 0 && (
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Issues ({diagnosis.issues.length})
-              </span>
+              </h3>
               {diagnosis.issues.map((issue, i) => (
                 <div
                   key={i}
@@ -210,9 +210,9 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
           {/* Improvements */}
           {diagnosis.improvements?.length > 0 && (
             <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Improvements
-              </span>
+              </h3>
               {diagnosis.improvements.map((imp, i) => (
                 <div
                   key={i}
