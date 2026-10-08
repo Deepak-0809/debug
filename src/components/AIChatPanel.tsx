@@ -193,6 +193,7 @@ export default function AIChatPanel({ runContext, className = "" }: AIChatPanelP
         onClick={() => setIsOpen(true)}
         className={`fixed bottom-5 right-5 z-50 h-12 w-12 rounded-full shadow-lg gap-0 p-0 ${className}`}
         title="Ask AI about this debug session"
+        aria-label="Open AI chat assistant"
       >
         <MessageCircle className="h-5 w-5" />
       </Button>
@@ -207,7 +208,7 @@ export default function AIChatPanel({ runContext, className = "" }: AIChatPanelP
           <Bot className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Debug Assistant</span>
         </div>
-        <Button variant="secondary" size="icon" className="h-7 w-7 border border-border" onClick={() => setIsOpen(false)}>
+        <Button variant="secondary" size="icon" className="h-7 w-7 border border-border" onClick={() => setIsOpen(false)} aria-label="Close AI chat">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -287,6 +288,7 @@ export default function AIChatPanel({ runContext, className = "" }: AIChatPanelP
             className="h-9 w-9 shrink-0"
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
+            aria-label="Send message"
           >
             <Send className="h-3.5 w-3.5" />
           </Button>

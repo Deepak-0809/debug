@@ -77,9 +77,9 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Diagnosis
-          </span>
+          </h2>
         </div>
         <div className="flex flex-1 items-center justify-center p-6">
           <div className="text-center space-y-2">
@@ -100,9 +100,9 @@ export default function DiagnosisDisplay({ diagnosis }: DiagnosisDisplayProps) {
   return (
     <div className="flex h-full flex-col animate-fade-in">
       <div className="flex items-center border-b border-border bg-secondary/30 px-4 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Diagnosis
-        </span>
+        </h2>
       </div>
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4 animate-fade-in">
