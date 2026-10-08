@@ -159,9 +159,9 @@ export default function About() {
                   <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Step {i + 1}
                   </div>
-                  <h4 className="text-sm font-bold text-foreground">
+                  <h3 className="text-sm font-bold text-foreground">
                     {step.title}
-                  </h4>
+                  </h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {step.description}
                   </p>
@@ -182,9 +182,9 @@ export default function About() {
                 key={i}
                 className="rounded-xl border border-border bg-card p-5 space-y-2"
               >
-                <h4 className="text-sm font-bold text-foreground">
+                <h3 className="text-sm font-bold text-foreground">
                   {f.title}
-                </h4>
+                </h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {f.description}
                 </p>

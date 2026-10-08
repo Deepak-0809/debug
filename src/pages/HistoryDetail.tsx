@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,46 @@ const statusConfig: Record<
   diagnosed: { label: "Diagnosed", variant: "default" },
 };
 
+const BASE_URL = "https://debugforcompetitiveprogramming.lovable.app";
+
+function RunMeta({
+  run,
+  id,
+  testCount,
+  failingCount,
+}: {
+  run: Run | null;
+  id?: string;
+  testCount: number;
+  failingCount: number;
+}) {
+  const short = (id || "").slice(0, 8);
+  const lang = run?.language || "code";
+  const status = run ? statusConfig[run.status]?.label || run.status : "";
+  const date = run ? format(new Date(run.created_at), "MMMM d, yyyy") : "";
+  const title = run
+    ? `Run ${short}: ${status} (${lang}${date ? ", " + date : ""}) – DebugCP`
+    : `Run ${short} – DebugCP`;
+  const description = run
+    ? `DebugCP run ${short} in ${lang}: ${status.toLowerCase()}. ${testCount} test case${
+        testCount === 1 ? "" : "s"
+      }${failingCount ? `, ${failingCount} failing` : ""}. See the full AI diagnosis.`
+    : `Details of DebugCP run ${short}.`;
+  const url = `${BASE_URL}/history/${id}`;
+  return (
+    <Helmet>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      <link rel="canonical" href={url} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:url" content={url} />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+    </Helmet>
+  );
+}
+
 export default function HistoryDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -121,6 +162,7 @@ export default function HistoryDetail() {
   if (loading) {
     return (
       <div className={`${isDark ? "dark" : ""} min-h-screen bg-background text-foreground flex items-center justify-center`}>
+        <RunMeta run={null} id={id} testCount={0} failingCount={0} />
         <Clock className="h-5 w-5 animate-spin mr-2 text-muted-foreground" />
         <span className="text-muted-foreground">Loading…</span>
       </div>
@@ -135,6 +177,7 @@ export default function HistoryDetail() {
 
   return (
     <div className={`${isDark ? "dark" : ""} min-h-screen bg-background text-foreground`}>
+      <RunMeta run={run} id={id} testCount={testCases.length} failingCount={failingCount} />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
