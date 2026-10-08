@@ -133,12 +133,12 @@ export default function History() {
     <div className={`${isDark ? "dark" : ""} min-h-screen bg-background text-foreground`}>
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" aria-label="Back to home" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold">Run History</h1>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+            <Button variant="ghost" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={toggleTheme}>
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
             <span className="text-sm text-muted-foreground">

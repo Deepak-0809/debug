@@ -138,7 +138,7 @@ export default function HistoryDetail() {
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/history")}>
+          <Button variant="ghost" size="icon" aria-label="Back to history" onClick={() => navigate("/history")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-0">
@@ -155,7 +155,7 @@ export default function HistoryDetail() {
               {run.ai_model_used && ` · AI: ${run.ai_model_used}`}
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleTheme}>
+          <Button variant="ghost" size="icon" aria-label="Toggle theme" className="h-8 w-8" onClick={toggleTheme}>
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
         </div>

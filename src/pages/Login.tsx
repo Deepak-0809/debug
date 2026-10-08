@@ -63,7 +63,7 @@ export default function Login() {
                 <Bug className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Debug</h1>
+                <h1 className="text-3xl font-bold text-foreground">Debug<span className="sr-only"> — AI-Powered Bug Finder for Competitive Programming</span></h1>
                 <p className="text-sm text-muted-foreground">Competitive Programming Bug Finder</p>
               </div>
             </div>
@@ -86,7 +86,7 @@ export default function Login() {
           {/* Right: Login form */}
           <Card className="border-border bg-card">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-foreground">Welcome Back</CardTitle>
+              <h2 className="text-2xl font-semibold leading-none tracking-tight text-foreground">Welcome Back</h2>
               <CardDescription className="text-muted-foreground">
                 Sign in to start debugging
               </CardDescription>
