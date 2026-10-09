@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bug, Sun, Moon, ArrowRight } from "lucide-react";
