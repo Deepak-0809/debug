@@ -448,7 +448,7 @@ const Index = () => {
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <Bug className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
-          <h1 className="text-base font-bold text-foreground">Debug<span className="sr-only"> — AI-Powered Differential Debugger</span></h1>
+          <h1 className="text-base font-bold text-foreground">Debug<span className="sr-only"> — AI-Powered Differential Debugger for Competitive Programming</span></h1>
           <span className="ml-1 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">Beta</span>
         </div>
         <div className="flex items-center gap-1.5">
