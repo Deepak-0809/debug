@@ -63,8 +63,8 @@ export function validateChatMessages(messages: unknown): ValidationError | null 
     if (!msg || typeof msg.role !== "string" || typeof msg.content !== "string") {
       return { field: `messages[${i}]`, message: "Each message must have role and content strings" };
     }
-    if (!["user", "assistant", "system"].includes(msg.role)) {
-      return { field: `messages[${i}].role`, message: "Role must be user, assistant, or system" };
+    if (!["user", "assistant"].includes(msg.role)) {
+      return { field: `messages[${i}].role`, message: "Role must be user or assistant" };
     }
     if (msg.content.length > MAX_MESSAGE_LENGTH) {
       return { field: `messages[${i}].content`, message: `Message content exceeds ${MAX_MESSAGE_LENGTH} characters` };

@@ -23,6 +23,12 @@ serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   if (body?.confirm !== "create-test-plans") return json(req, { error: "Missing confirmation" }, 403);
 
+  // Admin-only: requires a server-side setup secret that is never exposed to clients.
+  const setupSecret = Deno.env.get("RAZORPAY_SETUP_SECRET") || "";
+  if (!setupSecret || body?.secret !== setupSecret) {
+    return json(req, { error: "Unauthorized" }, 401);
+  }
+
   const keyId = Deno.env.get("RAZORPAY_KEY_ID") || "";
   if (!keyId.startsWith("rzp_test_")) {
     return json(req, { error: "Refusing to run: the configured Razorpay key is not a test key" }, 409);

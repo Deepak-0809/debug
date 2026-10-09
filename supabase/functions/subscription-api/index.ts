@@ -82,7 +82,8 @@ serve(async (req) => {
       }
       if (order?.status !== "paid" && Number(order?.amount_paid || 0) < Number(order?.amount || 1)) {
         const payment = await razorpayRequest(`/payments/${encodeURIComponent(paymentId)}`);
-        if (payment?.order_id !== orderId || !["captured", "authorized"].includes(payment?.status)) {
+        // Only captured payments count — an authorized-but-uncaptured payment must not unlock a plan.
+        if (payment?.order_id !== orderId || payment?.status !== "captured") {
           return json(req, { error: "Payment is not complete yet." }, 409);
         }
       }
