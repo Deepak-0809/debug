@@ -101,7 +101,7 @@ export default function About() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
               <Bug className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <h1 className="text-xl font-bold">About Debug</h1>
+            <h1 className="text-xl font-bold">About Debug — AI-Assisted Debugging for Competitive Programming</h1>
           </div>
           <div className="ml-auto">
             <Button
