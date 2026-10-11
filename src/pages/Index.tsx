@@ -280,7 +280,6 @@ const Index = () => {
     if (!user) { toast.error("Please log in again."); return; }
     if (!buggyCode.trim()) { toast.error("Please paste your buggy code"); return; }
     if (!correctCode.trim()) { toast.error("Please paste the correct reference code"); return; }
-    if (!testInput.trim()) { toast.error("Please enter test input"); return; }
 
     const cleanBuggy = sanitizeCode(buggyCode);
     const cleanCorrect = sanitizeCode(correctCode);
@@ -330,8 +329,8 @@ const Index = () => {
       }
 
       const testCases = [{ id: null, input: testInput }];
-      toast.info(`Running your test case (${detectedLang})...`);
-      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null, actionKey, actionType: "single_test" } });
+      toast.info(testInput.trim() ? `Running your test case (${detectedLang})...` : `Running with no input (${detectedLang})...`);
+      const { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLang, testCases, runId: null, actionKey, actionType: "single_test", noInput: !testInput.trim() } });
       if (execError) throw await functionError(execError, "Execution failed");
       if (execData?.error) {
         if (execData.code === "RUN_LIMIT_REACHED") navigate("/pricing");

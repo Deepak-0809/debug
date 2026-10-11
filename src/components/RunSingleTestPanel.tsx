@@ -25,7 +25,7 @@ export default function RunSingleTestPanel({ onRunSingle, loading, quotaLabel, l
         <div className="space-y-1.5 flex-1">
           <Label className="text-foreground text-sm">Test Input</Label>
           <Textarea
-            placeholder={`Paste your test input here...\n\nExample:\n5\n1 2 3 4 5`}
+            placeholder={`Paste your test input here (leave empty if your program reads no input)...\n\nExample:\n5\n1 2 3 4 5`}
             className="min-h-[100px] h-full font-mono text-xs text-foreground resize-none"
             value={testInput}
             onChange={(e) => setTestInput(e.target.value)}
