@@ -50,7 +50,6 @@ export async function callAnthropic(o: AIRequestOptions, key: string, model: str
     body: JSON.stringify({
       model, system, messages,
       max_tokens: o.max_tokens || 4096,
-      temperature: o.temperature ?? 0.3,
       ...(o.stream ? { stream: true } : {}),
     }),
   });
