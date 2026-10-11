@@ -1,6 +1,6 @@
 import { createAdminClient } from "../admin.ts";
 import { callAnthropic, callGemini, callLovable, callOpenAI } from "./adapters.ts";
-import { FREE_PROVIDER_ORDER, PAID_PLANS, PAID_PROVIDER_ORDER, PROVIDERS, type ProviderId } from "./providers.config.ts";
+import { FREE_PROVIDER_ORDER, PAID_FEATURE_PROVIDER_ORDER, PAID_PLANS, PAID_PROVIDER_ORDER, PROVIDERS, type ProviderId } from "./providers.config.ts";
 import { AIRouterError, type AIFailoverResult, type AIRequestOptions } from "./types.ts";
 
 const ADAPTERS: Record<ProviderId, typeof callLovable> = {

@@ -19,3 +19,9 @@ export const PROVIDERS: Record<ProviderId, { secret: string; model: string; time
 export const PAID_PROVIDER_ORDER: ProviderId[] = ["anthropic", "gemini", "openai"];
 export const FREE_PROVIDER_ORDER: ProviderId[] = [];
 export const PAID_PLANS = ["plus", "pro", "paid"];
+
+// Per-feature overrides (paid plans only): Claude is reserved for run/branch pipeline
+// calls; the chat assistant uses Gemini first to keep Claude spend for actual debugging.
+export const PAID_FEATURE_PROVIDER_ORDER: Record<string, ProviderId[]> = {
+  "debug-chat": ["gemini", "openai"],
+};
