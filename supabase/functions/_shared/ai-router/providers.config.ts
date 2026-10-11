@@ -8,7 +8,7 @@
 export type ProviderId = "anthropic" | "gemini" | "openai" | "lovable";
 
 export const PROVIDERS: Record<ProviderId, { secret: string; model: string; timeoutMs: number | null }> = {
-  anthropic: { secret: "ANTHROPIC_API_KEY", model: "claude-sonnet-5-1", timeoutMs: 30_000 },
+  anthropic: { secret: "ANTHROPIC_API_KEY", model: "claude-sonnet-4-5", timeoutMs: 30_000 },
   gemini: { secret: "GEMINI_API_KEY", model: "gemini-2.5-flash", timeoutMs: 10_000 },
   openai: { secret: "OPENAI_API_KEY", model: "gpt-4o-mini", timeoutMs: 10_000 },
   // Final fallback: no artificial timeout (long generations must not be cut off).
