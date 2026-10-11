@@ -15,7 +15,7 @@ export const PROVIDERS: Record<ProviderId, { secret: string; model: string; time
   lovable: { secret: "LOVABLE_API_KEY", model: "google/gemini-2.5-flash", timeoutMs: null },
 };
 
-// Anthropic removed: its account rejects every request (HTTP 400, no credit). Re-add once the key has credit.
-export const PAID_PROVIDER_ORDER: ProviderId[] = ["gemini", "openai"];
+// Paid plans (Plus/Pro) try Claude first; if it fails, the router falls over to the next provider.
+export const PAID_PROVIDER_ORDER: ProviderId[] = ["anthropic", "gemini", "openai"];
 export const FREE_PROVIDER_ORDER: ProviderId[] = [];
 export const PAID_PLANS = ["plus", "pro", "paid"];
