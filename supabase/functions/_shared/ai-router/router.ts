@@ -1,6 +1,6 @@
 import { createAdminClient } from "../admin.ts";
 import { callAnthropic, callGemini, callLovable, callOpenAI } from "./adapters.ts";
-import { FREE_PROVIDER_ORDER, PAID_PLANS, PAID_PROVIDER_ORDER, PROVIDERS, type ProviderId } from "./providers.config.ts";
+import { FREE_PROVIDER_ORDER, PAID_FEATURE_PROVIDER_ORDER, PAID_PLANS, PAID_PROVIDER_ORDER, PROVIDERS, type ProviderId } from "./providers.config.ts";
 import { AIRouterError, type AIFailoverResult, type AIRequestOptions } from "./types.ts";
 
 const ADAPTERS: Record<ProviderId, typeof callLovable> = {
@@ -28,7 +28,8 @@ async function logUsage(row: Record<string, unknown>) {
 export async function routeAI(options: AIRequestOptions): Promise<AIFailoverResult> {
   const plan = await loadPlan(options.userId);
   const isPaid = PAID_PLANS.includes(plan);
-  const order: ProviderId[] = [...(isPaid ? PAID_PROVIDER_ORDER : FREE_PROVIDER_ORDER), "lovable"];
+  const featureOrder = isPaid && options.feature ? PAID_FEATURE_PROVIDER_ORDER[options.feature] : undefined;
+  const order: ProviderId[] = [...(isPaid ? (featureOrder ?? PAID_PROVIDER_ORDER) : FREE_PROVIDER_ORDER), "lovable"];
   const chain = order.filter((id) => !!Deno.env.get(PROVIDERS[id].secret));
   console.log(`[ai-router] plan=${plan} feature=${options.feature ?? "-"} chain=${chain.join(" → ") || "(none)"}`);
 
