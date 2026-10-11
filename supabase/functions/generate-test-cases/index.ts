@@ -218,6 +218,20 @@ serve(async (req) => {
       });
     }
 
+    // Programs that read no input: one empty-input run is enough; skip the AI entirely.
+    if (schema?.problem_meta?.no_input === true && safeRetryRound === 0) {
+      const parsed = { test_cases: [{ input: "", category: "no_input", description: "Program reads no input — single run" }], total_count: 1 };
+      if (runId) {
+        const { error: insertError } = await auth.supabase.from("test_cases").insert([{ run_id: runId, input_data: "", is_failing: false }]);
+        if (insertError) console.error("Failed to store test cases:", insertError.code);
+        await auth.supabase.from("runs").update({ status: "tests_generated" }).eq("id", runId);
+      }
+      const usage = await chargeQuota(auth.userId, actionKey, runId);
+      return new Response(JSON.stringify({ result: parsed, ai_provider: null, ai_model: null, usage }), {
+        status: 200, headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
     const SYSTEM_PROMPT = getSystemPrompt(safeRetryRound);
     const trimmedSchema = trimSchema(schema);
     const roundLabel = safeRetryRound > 0 ? ` (retry round ${safeRetryRound} of 4 — generate COMPLETELY DIFFERENT and HARDER tests than all previous rounds)` : "";
