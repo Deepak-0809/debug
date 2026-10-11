@@ -201,6 +201,15 @@ serve(async (req) => {
     }
 
 
+    // Deterministic no-input detection: only when neither program contains any stdin read.
+    const INPUT_RE = /\b(cin|scanf|getchar|getchar_unlocked|gets|fgets|fread|getline|freopen|input|raw_input|stdin|open\s*\(\s*0|Scanner|BufferedReader|InputStreamReader|DataInputStream|System\.in|readline|readLine|readFileSync|process\.stdin|prompt|read)\b/;
+    const stripComments = (s: string) => (s || "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "").replace(/(^|\s)#(?!include|define|pragma|if|endif|else|undef).*$/gm, "$1");
+    const noInput = !INPUT_RE.test(stripComments(buggyCode)) && !INPUT_RE.test(stripComments(correctCode));
+    if (parsed && typeof parsed === "object") {
+      const p = parsed as Record<string, any>;
+      p.problem_meta = { ...(p.problem_meta || {}), no_input: noInput && p.problem_meta?.is_class_based !== true };
+    }
+
     return new Response(JSON.stringify({ schema: parsed, ai_provider: provider, ai_model: model, usage: quota.usage }), {
       status: 200, headers: { ...headers, "Content-Type": "application/json" },
     });

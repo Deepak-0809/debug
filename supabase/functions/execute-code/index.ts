@@ -103,7 +103,7 @@ serve(async (req) => {
   if (!allowed) return rateLimitResponse("execute-code");
 
   try {
-    const { buggyCode, correctCode, language, testCases, runId, actionKey, actionType = "single_test" } = await req.json();
+    const { buggyCode, correctCode, language, testCases, runId, actionKey, actionType = "single_test", noInput } = await req.json();
 
     // Validate inputs
     const validationErrors = [
@@ -123,7 +123,9 @@ serve(async (req) => {
     const safeLang = validateLanguage(language);
     const langId = LANGUAGE_MAP[safeLang] || LANGUAGE_MAP["cpp"];
 
-    const validTestCases = testCases.filter((tc: any) => tc.input && tc.input.trim().length > 0);
+    const validTestCases = noInput === true
+      ? testCases.slice(0, 1).map((tc: any) => ({ ...tc, input: "" }))
+      : testCases.filter((tc: any) => tc.input && tc.input.trim().length > 0);
     if (validTestCases.length === 0) {
       return new Response(JSON.stringify({
         compilation_error: true, message: "All test case inputs are empty or invalid.",
@@ -157,8 +159,10 @@ serve(async (req) => {
       const correctResult = allResults[i * 2 + 1];
       if (buggyResult.status.id === 6) { hasCompileError = true; compileErrorMsg = buggyResult.compile_output || "Compilation error in buggy code"; }
       if (correctResult.status.id === 6) { hasCompileError = true; compileErrorMsg = correctResult.compile_output || "Compilation error in correct code"; }
-      const buggyOutput = buggyResult.stdout?.trim() || "";
-      const correctOutput = correctResult.stdout?.trim() || "";
+      // Strict comparison: only normalize line endings and trailing newlines; spaces count.
+      const norm = (s: string | null) => (s ?? "").replace(/\r\n/g, "\n").replace(/\n+$/, "");
+      const buggyOutput = norm(buggyResult.stdout);
+      const correctOutput = norm(correctResult.stdout);
       const isFailing = buggyOutput !== correctOutput;
       const getStatus = (r: any) => {
         if (r.status.id === 5) return "Time Limit Exceeded";

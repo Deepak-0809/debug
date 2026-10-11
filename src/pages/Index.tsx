@@ -90,6 +90,7 @@ const Index = () => {
       const schema = analysisData.schema;
       const detectedLanguage = schema?.problem_meta?.language || "cpp";
       const isClassBased = schema?.problem_meta?.is_class_based === true;
+      const noInput = schema?.problem_meta?.no_input === true;
 
       // If class-based (LeetCode style), wrap the code with main() + input parsing
       let execBuggy = cleanBuggy;
@@ -151,7 +152,7 @@ const Index = () => {
         return;
       }
 
-      setProgressStep("Step 3/5: Generating test cases...");
+      setProgressStep(noInput ? "Step 3/5: Program reads no input — running it once..." : "Step 3/5: Generating test cases...");
       const { data: testData, error: testError } = await supabase.functions.invoke("generate-test-cases", { body: { schema, runId, actionKey } });
       if (testError) throw await functionError(testError, "Test case generation failed");
       if (testData?.error) throw new Error(testData.error);
@@ -169,7 +170,7 @@ const Index = () => {
       }
 
       // Use wrapped code for execution (same as original for non-class-based)
-      let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: storedTestCases, runId, actionKey, actionType: "full_pipeline" } });
+      let { data: execData, error: execError } = await supabase.functions.invoke("execute-code", { body: { buggyCode: execBuggy, correctCode: execCorrect, language: detectedLanguage, testCases: storedTestCases, runId, actionKey, actionType: "full_pipeline", noInput } });
       if (execError) throw await functionError(execError, "Code execution failed");
       if (execData?.error) throw new Error(execData.error);
 
@@ -177,6 +178,7 @@ const Index = () => {
       const MAX_RETRY_ROUNDS = 4;
       let retryRound = 0;
       while (
+        !noInput &&
         !execData?.compilation_error &&
         execData?.summary?.failing === 0 &&
         retryRound < MAX_RETRY_ROUNDS
